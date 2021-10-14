@@ -1,8 +1,11 @@
 # GitHub Pages の作成
 
+[Back to Top](./index.md)
+
 ## リポジトリ構成
 
-Monorepo: `techacademy21-monorepo` ※本手順はこのリポジトリに GitHub Pages 用の docs ディレクトリを作成する  
+Monorepo: `techacademy21-monorepo`  
+※本手順はこのリポジトリに GitHub Pages 用の docs ディレクトリを作成する  
 Multirepo: `techacademy21-xxxx`
 
 ---
@@ -16,7 +19,9 @@ Multirepo: `techacademy21-xxxx`
 
 ## 空の GitHub リポジトリを作成
 
-## [techacademy21-monorepo](https://github.com/higurashit/techacademy21-monorepo) を作成
+[techacademy21-monorepo](https://github.com/higurashit/techacademy21-monorepo) を作成
+
+---
 
 ## GitHub に ssh 鍵を登録する
 
@@ -29,8 +34,6 @@ $ ls -l
 techacademy21-monorepo # 秘密鍵
 techacademy21-monorepo.pub # 公開鍵
 ```
-
----
 
 ### SSH の config 設定（複数の GitHub アカウントがある場合）
 
@@ -54,23 +57,17 @@ Host github.com.higurashit
   IdentitiesOnly yes
 ```
 
----
-
 ### 公開鍵の中身をコピー
 
 ```sh
 $ cat techacademy21-monorepo.pub | clip
 ```
 
----
-
 ### GitHub に公開鍵を登録
 
 [SSH 鍵の新規登録](https://github.com/settings/ssh/new)  
 Title：`HOME--techacademy21-monorepo`  
 Key：`Ctrl + v` でペースト
-
----
 
 ### SSH 接続確認
 
@@ -80,6 +77,8 @@ Hi higurashit! You\'ve successfully authenticated, but GitHub does not provide s
 ```
 
 ---
+
+## GiHub Pages への公開
 
 ### プロジェクトを作成
 
@@ -93,8 +92,6 @@ $ git config --local user.email higurashit@nttdata-bizsys.co.jp
 $ git fetch
 ```
 
-### GiHub Pages への公開
-
 ### 公開ページの作成
 
 ```sh
@@ -105,11 +102,17 @@ $ git commit -m "initial commit."
 $ git push origin HEAD
 ```
 
-### GitHub での設定
+### GitHub での公開設定
 
 [「Repository」→「Settings」→「Pages」で設定](https://github.com/higurashit/techacademy21-monorepo/settings/pages)
 
-### GitHub Pages Tips
+---
+
+## GitHub Pages Tips
 
 - [GitHub Flavored Markdown Spec](https://github.github.com/gfm/)
 - [コードブロックの作成と強調表示](https://docs.github.com/ja/github/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks)
+
+---
+
+[Back to Top](./index.md)
