@@ -2,17 +2,16 @@
 
 ## リポジトリ構成
 
-Monorepo: techacademy21-monorepo  
-Multirepo: techacademy21-xxxx
+Monorepo: `techacademy21-monorepo`  
+Multirepo: `techacademy21-xxxx`
 
 ## リポジトリ設定
 
-[https://github.com/settings/repositories]  
-「Repository default branch」→ master
+[「Repository default branch」→ master](https://github.com/settings/repositories)
 
 ## 空の GitHub リポジトリを作成
 
-https://github.com/higurashit/techacademy21-monorepo
+[techacademy21-monorepo](https://github.com/higurashit/techacademy21-monorepo)
 
 ## GitHub に ssh 鍵を登録する
 
@@ -52,7 +51,7 @@ $ cat techacademy21-monorepo.pub | clip
 
 ### GitHub に公開鍵を登録
 
-https://github.com/settings/ssh/new  
+[SSH 鍵の新規登録](https://github.com/settings/ssh/new)  
 Title：`HOME--techacademy21-monorepo`  
 Key：`Ctrl + v` でペースト
 
@@ -89,14 +88,9 @@ $ git push origin HEAD
 
 ### GitHub での設定
 
-「Repository」→「Settings」→「Pages」で設定
+[「Repository」→「Settings」→「Pages」で設定](https://github.com/higurashit/techacademy21-monorepo/settings/pages)
 
 ### GitHub Pages Tips
 
-#### GitHub Flavored Markdown Spec
-
-https://github.github.com/gfm/
-
-#### コードブロックの作成と強調表示
-
-https://docs.github.com/ja/github/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks
+- [GitHub Flavored Markdown Spec](https://github.github.com/gfm/)
+- [コードブロックの作成と強調表示](https://docs.github.com/ja/github/writing-on-github/working-with-advanced-formatting/creating-and-highlighting-code-blocks)
