@@ -7,7 +7,7 @@ Multirepo: techacademy21-xxxx
 
 ## リポジトリ設定
 
-https://github.com/settings/repositories  
+[https://github.com/settings/repositories]  
 「Repository default branch」→ master
 
 ## 空の GitHub リポジトリを作成
