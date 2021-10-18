@@ -63,9 +63,10 @@ $ cat techacademy21-monorepo.pub | clip
 
 ### GitHub に公開鍵を登録
 
-[SSH 鍵の新規登録](https://github.com/settings/ssh/new)  
-Title：`HOME--techacademy21-monorepo`  
-Key：`Ctrl + v` でペースト
+[ここ](https://github.com/settings/ssh/new) から公開鍵の新規登録を行う
+
+- `Title`：HOME--techacademy21-monorepo
+- `Key`：Ctrl + v でペースト
 
 ### SSH 接続確認
 
@@ -105,7 +106,7 @@ $ git push origin HEAD
 
 ### GitHub での公開設定
 
-[「Repository」→「Settings」→「Pages」で設定](https://github.com/higurashit/techacademy21-monorepo/settings/pages)
+[ここ](https://github.com/higurashit/techacademy21-monorepo/settings/pages)から GitHub Pages の公開設定を行う（「Repository」→「Settings」→「Pages」）
 
 - `Source`：ブランチ名とドキュメントフォルダ（docs）を設定
 - `Theme Chooser`：デザインをテンプレートから作成（自作もできそう）
