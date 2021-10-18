@@ -6,14 +6,7 @@
 
 Monorepo: `techacademy21-monorepo`  
 ※本手順はこのリポジトリに GitHub Pages 用の docs ディレクトリを作成する  
-Multirepo: `techacademy21-xxxx`
-
----
-
-## GitHub のリポジトリ設定
-
-[ここから設定を変更する](https://github.com/settings/repositories)  
-「Repository default branch」→ master に変更
+※Multirepo 用は `techacademy21-xxxx` とする
 
 ---
 
@@ -23,19 +16,22 @@ Multirepo: `techacademy21-xxxx`
 
 ---
 
-## GitHub に ssh 鍵を登録する
+## GitHub 用の ssh 鍵を作成する
+
+他の ssh 鍵と被らないように、専用のファイル名で ssh 鍵を作成する  
+※Git bash で実施する
 
 ### ssh 鍵の作成
 
 ```sh
 $ cd ~/.ssh
-$ ssh-keygen -t rsa -f techacademy21-monorepo #
+$ ssh-keygen -t rsa -f techacademy21-monorepo
 $ ls -l
 techacademy21-monorepo # 秘密鍵
 techacademy21-monorepo.pub # 公開鍵
 ```
 
-### SSH の config 設定（複数の GitHub アカウントがある場合）
+### SSH の config 設定
 
 `~/.ssh/config` を確認し、存在しなければ新規作成する
 
@@ -63,6 +59,8 @@ Host github.com.higurashit
 $ cat techacademy21-monorepo.pub | clip
 ```
 
+## GitHub と ssh 通信する
+
 ### GitHub に公開鍵を登録
 
 [SSH 鍵の新規登録](https://github.com/settings/ssh/new)  
@@ -83,7 +81,7 @@ Hi higurashit! You\'ve successfully authenticated, but GitHub does not provide s
 ### プロジェクトを作成
 
 ```sh
-$ ls -l ~/MyProject
+$ ls -l ~/MyProject # 任意のフォルダでOK
 $ git clone https://github.com/higurashit/techacademy21-monorepo.git
 $ cd techacademy21-monorepo/
 
@@ -95,6 +93,9 @@ $ git fetch
 ### 公開ページの作成
 
 ```sh
+$ pwd
+~/MyProject/techacademy21-monorepo/
+
 $ mkdir docs
 $ echo "# Hello GitHub Pages!" > docs/index.md
 $ git add .
@@ -105,6 +106,9 @@ $ git push origin HEAD
 ### GitHub での公開設定
 
 [「Repository」→「Settings」→「Pages」で設定](https://github.com/higurashit/techacademy21-monorepo/settings/pages)
+
+- `Source`：ブランチ名とドキュメントフォルダ（docs）を設定
+- `Theme Chooser`：デザインをテンプレートから作成（自作もできそう）
 
 ---
 
