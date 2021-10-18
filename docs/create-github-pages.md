@@ -111,6 +111,12 @@ $ git push origin HEAD
 - `Source`：ブランチ名とドキュメントフォルダ（docs）を設定
 - `Theme Chooser`：デザインをテンプレートから作成（自作もできそう）
 
+### 公開ページにアクセスする
+
+「Pages」タブで以下の表示を確認し、ページにアクセスする  
+![エビフライトライアングル](./assets/create-github-pages/github-pages-success.png 'サンプル')
+https://higurashit.github.io/techacademy21-monorepo/
+
 ---
 
 ## GitHub Pages Tips
