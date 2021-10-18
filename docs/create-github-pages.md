@@ -10,7 +10,7 @@ Multirepo: `techacademy21-xxxx`
 
 ---
 
-## リポジトリ設定
+## GitHub のリポジトリ設定
 
 [ここから設定を変更する](https://github.com/settings/repositories)  
 「Repository default branch」→ master に変更
@@ -29,7 +29,7 @@ Multirepo: `techacademy21-xxxx`
 
 ```sh
 $ cd ~/.ssh
-$ ssh-keygen -t rsa -f techacademy21-monorepo
+$ ssh-keygen -t rsa -f techacademy21-monorepo #
 $ ls -l
 techacademy21-monorepo # 秘密鍵
 techacademy21-monorepo.pub # 公開鍵
