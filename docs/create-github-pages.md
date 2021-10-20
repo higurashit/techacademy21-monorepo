@@ -114,7 +114,7 @@ $ git push origin HEAD
 ### 公開ページにアクセスする
 
 「Pages」タブで以下の表示を確認し、ページにアクセスする  
-![エビフライトライアングル](./assets/create-github-pages/github-pages-success.png 'サンプル')
+![success](./assets/create-github-pages/github-pages-success.png 'success')
 [https://higurashit.github.io/techacademy21-monorepo/](https://higurashit.github.io/techacademy21-monorepo/)
 
 ---
