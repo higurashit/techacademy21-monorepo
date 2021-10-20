@@ -75,6 +75,7 @@ Postman で POST リクエストを送り、正常に動作することを確認
 - SSL verification は `Enable SSL verification` を選択（デフォルト）
 - 「Which events would you like to trigger this webhook?」は `Just the push event` を選択（デフォルト）
 - `Active` にチェックを入れて `Add Webhook` ボタンを押す
+- （セキュリティ対応）Secret を設定することで認証が可能
 
 ### GitHub Webhook の動作テスト(2021/10/20)
 
@@ -128,6 +129,48 @@ Postman で POST リクエストを送り、正常に動作することを確認
 
 body の中身を確認するとコミット情報などが取得できることを確認。（GitHub→API Gateway→Lambda）
 ![github-webhook-body](./assets/monorepo-vs-multirepo/github-webhook.png)
+
+### event の各要素(2021/10/20)
+
+| プロパティ名                   | 格納されている値          | 例                                                             |
+| ------------------------------ | ------------------------- | -------------------------------------------------------------- |
+| event.body.repositry.full_name | アカウント名/リポジトリ名 | higurashit/techacademy21-monorepo                              |
+| event.body.ref                 | 更新ブランチ名            | refs/heads/master                                              |
+| event.body.commits             | 各コミットごとの更新情報  | コミットごとに added, removed, modified にパスが格納 ※下記参照 |
+
+```
+event
+　└ body
+　　　├ commits[0]
+　　　│　├ added:    [0] => docs/hoge.md, [1] => docs/fuga.md
+　　　│　├ removed:  [0] => docs/hoge2.md, [1] => docs/fuga2.md
+　　　│　└ modified: [0] => docs/hoge3.md, [1] => docs/fuga3.md
+　　　├ commits[1]
+　　　│　└ …
+　　　├ commits[2]
+　　　│　└ …
+```
+
+### Lambda 関数による更新対象の抽出(2021/10/20 ~)
+
+パイプラインを余計に動作させないように、以下を指定する
+
+- リポジトリ名
+- ブランチ名
+- 各サービスごとの設定
+  - ディレクトリ名
+  - 無視する拡張子
+  - パイプライン名称
+
+```json
+{
+  "GitHubRepo": "higurashit/techacademy21-monorepo",
+  "GitHubBranch": "main",
+  "ChangeMatchExpressions": "ProjectA/.*",
+  "IgnoreFiles": "*.pdf;*.md",
+  "CodePipelineName": "ProjectA - CodePipeline"
+}
+```
 
 ### 得た学び
 
