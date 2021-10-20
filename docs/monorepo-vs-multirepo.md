@@ -55,12 +55,16 @@ exports.handler = async (event) => {
 };
 ```
 
+Deploy して Test を行う。（テストイベントは API Gateway AWS Proxy）  
+正常に動作することを確認。（Lambda）
+
 ### API Gateway の作成(2021/10/20)
 
 東京リージョンで行う。  
 HTTP API の`MA-higurashit-github-resolver`を作成。  
 作成した Lambda を統合し、POST メソッドのみ作成する。  
-`$default`ステージのエンドポイントが払い出されるので、URL をコピーする。
+`$default`ステージのエンドポイントが払い出されるので、`https://[api-id].execute-api.ap-northeast-1.amazonaws.com/MA-higurashit-github-resolver` をコピーする。  
+Postman で POST リクエストを送り、正常に動作することを確認。（API Gateway → Lambda）
 
 ### GitHub の Webhook 設定(2021/10/20)
 
@@ -73,6 +77,12 @@ HTTP API の`MA-higurashit-github-resolver`を作成。
 - `Active` にチェックを入れて `Add Webhook` ボタンを押す
 
 ### 動作テスト(2021/10/20)
+
+- 試しに Push をしてみる
+- GitHub の Webhook 結果が 404(Not Found)に
+  - POST メソッドであることは OK
+  - エンドポイント誤り（統合リソースをつけていなかった）
+- 再実行したところ、
 
 ### 得た学び
 
