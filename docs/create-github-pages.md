@@ -84,6 +84,7 @@ Hi higurashit! You\'ve successfully authenticated, but GitHub does not provide s
 ```sh
 $ ls -l ~/MyProject # 任意のフォルダでOK
 $ git clone https://github.com/higurashit/techacademy21-monorepo.git
+$ git clone git@github.com.higurashit:higurashit/techacademy21-monorepo.git # こっちだったかも…
 $ cd techacademy21-monorepo/
 
 $ git config --local user.name higurashit

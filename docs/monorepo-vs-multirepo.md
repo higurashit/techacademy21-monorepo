@@ -25,15 +25,6 @@
 [この記事](https://aws.amazon.com/jp/blogs/news/integrate-github-monorepo-with-aws-codepipeline-to-run-project-specific-ci-cd-pipelines/)を参考に構築する  
 ![mono-repo](./assets/monorepo-vs-multirepo/mono-repo.png)
 
-## 実装内容と得た学び（AWS × Multirepo）
-
-- Pros
-  - リポジトリと CodePipeline を紐付けやすいため、マネージドをフル活用できる
-- Cons
-  - それぞれのサービスが小規模の場合、全体のサービスの大きさに比べてリポジトリ管理が煩雑になる
-
----
-
 ## 実装内容（AWS × Monorepo）(2021/10/20 ~)
 
 ### 空の Lambda 関数の作成(2021/10/20)
@@ -63,7 +54,7 @@ Deploy して Test を行う。（テストイベントは API Gateway AWS Proxy
 東京リージョンで行う。  
 HTTP API の`MA-higurashit-github-resolver`を作成。  
 作成した Lambda を統合し、POST メソッドのみ作成する。  
-`$default`ステージのエンドポイントが払い出されるので、`https://[api-id].execute-api.ap-northeast-1.amazonaws.com/MA-higurashit-github-resolver` をコピーする。  
+`$default`ステージのエンドポイントが払い出されるので、`https://[api-id].execute-api.ap-northeast-1.amazonaws.com/MA-higurashit-github-resolver`をコピーする。  
 Postman で POST リクエストを送り、正常に動作することを確認。（API Gateway → Lambda）
 
 ### GitHub の Webhook 設定(2021/10/20)
@@ -71,10 +62,10 @@ Postman で POST リクエストを送り、正常に動作することを確認
 [ここ](https://github.com/higurashit/techacademy21-monorepo/settings/hooks/new)から Webhook を追加する
 
 - Payload URL に API Gateway のエンドポイントを指定する。
-- Content type は[この記事](https://aws.amazon.com/jp/blogs/news/integrate-github-monorepo-with-aws-codepipeline-to-run-project-specific-ci-cd-pipelines/)を参考に `application/json` を選択する。
-- SSL verification は `Enable SSL verification` を選択（デフォルト）
-- 「Which events would you like to trigger this webhook?」は `Just the push event` を選択（デフォルト）
-- `Active` にチェックを入れて `Add Webhook` ボタンを押す
+- Content type は[この記事](https://aws.amazon.com/jp/blogs/news/integrate-github-monorepo-with-aws-codepipeline-to-run-project-specific-ci-cd-pipelines/)を参考に`application/json`を選択する。
+- SSL verification は`Enable SSL verification`を選択（デフォルト）
+- 「Which events would you like to trigger this webhook?」は`Just the push event`を選択（デフォルト）
+- `Active`にチェックを入れて`Add Webhook`ボタンを押す
 - （セキュリティ対応）Secret を設定することで認証が可能
 
 ### GitHub Webhook の動作テスト(2021/10/20)
@@ -171,6 +162,15 @@ event
   "CodePipelineName": "ProjectA - CodePipeline"
 }
 ```
+
+## 実装内容と得た学び（AWS × Multirepo）
+
+- Pros
+  - リポジトリと CodePipeline を紐付けやすいため、マネージドをフル活用できる
+- Cons
+  - それぞれのサービスが小規模の場合、全体のサービスの大きさに比べてリポジトリ管理が煩雑になる
+
+---
 
 ### 得た学び
 
