@@ -323,9 +323,9 @@ Lambda から取得できるかを動作確認する
 
 ## (補足) CodeCommit の場合
 
-AWS SDK[5]で取得可能のように見える
+AWS SDK<sup>[5]</sup>で取得可能のように見える
 
-- BatchGetCommits[6]
+- BatchGetCommits<sup>[6]</sup>
 
 ## 実装内容と得た学び（AWS × Multirepo）
 

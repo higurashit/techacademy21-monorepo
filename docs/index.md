@@ -10,5 +10,6 @@
 ## Tips
 
 - [GitHub Pages の作成](./create-github-pages.md)
-- [AWs 構成図の書き方(draw.io)](./draw-io.md)
+- [AWS 構成図の書き方(draw.io)](./draw-io.md)
+- [AWS Cloud Development Kit (AWS CDK) について](./aws-cdk.md)
 - [ノウハウ集](./knowhow.md)
