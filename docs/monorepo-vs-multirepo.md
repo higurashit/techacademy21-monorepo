@@ -156,7 +156,8 @@ event
 
 ## Lambda 関数による更新対象の抽出(2021/10/20 ~)
 
-パイプラインを余計に動作させないように、以下を指定する
+パイプラインを余計に動作させないように、json 形式で設定を追加する  
+※ゆくゆくは S3 に登録する想定
 
 - リポジトリ名
 - ブランチ名
@@ -261,7 +262,8 @@ const needDeploy = (filepath, ignoreFiles, ignoreDirectorys) => {
 
 ## AWS CodePipeline の作成と Lambda からの起動(2021/10/31~)
 
-この手順<sup>[3]</sup>を参考に作成する
+この手順<sup>[3]</sup>を参考に Codepipeline を作成する
+
 Lambda の設定
 
 ```javascript
@@ -302,7 +304,7 @@ const startCodePipeline = ({ pipelineName }) => {};
 
 IAM にて Lambda のロール設定
 
-## Lambda からキックできるかを動作確認する
+動作確認する
 
 ## S3 への json 登録(2021/10/31~)
 
@@ -310,13 +312,15 @@ IAM にて Lambda のロール設定
 
 IAM にて Lambda のロール設定
 
-Lambda から取得できるかを動作確認する
+動作確認する
 
 ---
 
 ## GitHub から CodePipeline の起動
 
----
+テストデータを GitHub リポジトリの event 値に置き換える
+
+実際にファイルを更新する
 
 ## (補足) CodeCommit の場合
 
