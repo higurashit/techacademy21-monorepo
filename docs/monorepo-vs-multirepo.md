@@ -18,16 +18,18 @@
 
 ## AWS × Multirepo での CI/CD パイプライン構成
 
-![multi-repo](./assets/monorepo-vs-multirepo/multi-repo.png)
+## ![multi-repo](./assets/monorepo-vs-multirepo/multi-repo.png)
 
 ## AWS × Monorepo での CI/CD パイプライン構成
 
 [この記事](https://aws.amazon.com/jp/blogs/news/integrate-github-monorepo-with-aws-codepipeline-to-run-project-specific-ci-cd-pipelines/)を参考に構築する  
 ![mono-repo](./assets/monorepo-vs-multirepo/mono-repo.png)
 
-## 実装内容（AWS × Monorepo）(2021/10/20 ~)
+---
 
-### 空の Lambda 関数の作成(2021/10/20)
+# 実装内容（AWS × Monorepo）(2021/10/20 ~)
+
+## 空の Lambda 関数の作成(2021/10/20)
 
 東京リージョンで行う。  
 デフォルト設定で`MA-higurashit-github-resolver`関数を作成。（言語は nodejs14、権限はデフォルト）  
@@ -49,7 +51,9 @@ exports.handler = async (event) => {
 Deploy して Test を行う。（テストイベントは API Gateway AWS Proxy）  
 正常に動作することを確認。（Lambda）
 
-### API Gateway の作成(2021/10/20)
+---
+
+## API Gateway の作成(2021/10/20)
 
 東京リージョンで行う。  
 HTTP API の`MA-higurashit-github-resolver`を作成。  
@@ -57,7 +61,9 @@ HTTP API の`MA-higurashit-github-resolver`を作成。
 `$default`ステージのエンドポイントが払い出されるので、`https://[api-id].execute-api.ap-northeast-1.amazonaws.com/MA-higurashit-github-resolver`をコピーする。  
 Postman で POST リクエストを送り、正常に動作することを確認。（API Gateway → Lambda）
 
-### GitHub の Webhook 設定(2021/10/20)
+---
+
+## GitHub の Webhook 設定(2021/10/20)
 
 [ここ](https://github.com/higurashit/techacademy21-monorepo/settings/hooks/new)から Webhook を追加する
 
@@ -68,7 +74,9 @@ Postman で POST リクエストを送り、正常に動作することを確認
 - `Active`にチェックを入れて`Add Webhook`ボタンを押す
 - （セキュリティ対応）Secret を設定することで認証が可能
 
-### GitHub Webhook の動作テスト(2021/10/20)
+---
+
+## GitHub Webhook の動作テスト(2021/10/20)
 
 - 試しに Push をしてみる
 - GitHub の Webhook 結果が 404(Not Found)に
@@ -121,7 +129,9 @@ Postman で POST リクエストを送り、正常に動作することを確認
 body の中身を確認するとコミット情報などが取得できることを確認。（GitHub→API Gateway→Lambda）
 ![github-webhook-body](./assets/monorepo-vs-multirepo/github-webhook.png)
 
-### event の各要素(2021/10/20)
+---
+
+## event の各要素(2021/10/20)
 
 | プロパティ名                   | 格納されている値          | 例                                                             |
 | ------------------------------ | ------------------------- | -------------------------------------------------------------- |
@@ -142,7 +152,9 @@ event
 　　　│　└ …
 ```
 
-### Lambda 関数による更新対象の抽出(2021/10/20 ~)
+---
+
+## Lambda 関数による更新対象の抽出(2021/10/20 ~)
 
 パイプラインを余計に動作させないように、以下を指定する
 
@@ -157,11 +169,163 @@ event
 {
   "GitHubRepo": "higurashit/techacademy21-monorepo",
   "GitHubBranch": "main",
-  "ChangeMatchExpressions": "ProjectA/.*",
-  "IgnoreFiles": "*.pdf;*.md",
-  "CodePipelineName": "ProjectA - CodePipeline"
+  "Services": [
+    {
+      "ServiceName": "Register DataA Service",
+      "ChangeMatchExpressions": "RegisterDataA/.*",
+      "IgnoreFiles": ["*.pdf", "*.md"],
+      "IgnoreDirectorys": ["RegisterDataA/docs"],
+      "CodePipelineName": "RegisterDataA - CodePipeline"
+    },
+    {
+      "ServiceName": "RegisterDataB",
+      "ChangeMatchExpressions": "RegisterDataB/.*",
+      "IgnoreFiles": ["*.pdf", "*.md"],
+      "IgnoreDirectorys": ["RegisterDataB/docs"],
+      "CodePipelineName": "RegisterDataB - CodePipeline"
+    }
+  ]
 }
 ```
+
+```javascript
+exports.handler = async (event) => {
+  console.log({ event });
+
+  /* ここから追加 */
+  const setting = {}; // 直接記載(いずれS3)
+  const commits = []; // 直接記載(いずれGitHub経由)
+
+  // Pipeline実行対象の判定
+  const targetRepos = setting.Services.map((service) => {
+    const isTargetRepo = getTargetRepo({ commits, service });
+    return { ...service, isTargetRepo };
+  }).filter((x) => !!x);
+
+  console.log({ targetRepos });
+  /* ここまで追加 */
+
+  // TODO implement
+  const response = {
+    statusCode: 200,
+    body: JSON.stringify('Hello from Lambda!'),
+  };
+  return response;
+};
+```
+
+<details>
+<summary>getTargetRepo の中身は以下</summary>
+
+```javascript
+// Pipeline実行対象の判定
+const getTargetRepo = ({ commits, service }) => {
+  // 無視ファイル、無視ディレクトリを取得
+  const { IgnoreFiles, IgnoreDirectorys } = service;
+
+  // 各コミットのうち1つでも対象であればtrueを返す
+  return commits.some((commit) => {
+    const { added, removed, modified } = commit;
+    // 各ファイルのうち1つでも対象であればtrueを返す
+    return [...added, ...removed, ...modified].some((file) =>
+      needDeploy(file, IgnoreFiles, IgnoreDirectorys)
+    );
+  });
+};
+
+// ファイルが対象かどうかを判定
+const needDeploy = (filepath, ignoreFiles, ignoreDirectorys) => {
+  // 無視対象のディレクトリに含まれているかを判定
+  const isIgnoreDirectory = ignoreDirectorys.some((ignoreDirectory) => {
+    const reg = new RegExp(`^${ignoreDirectory}`);
+    return !!filepath.match(reg);
+  });
+  if (isIgnoreDirectory) return false;
+
+  // 無視対象のファイルかを判定
+  const filename = path.basename(filepath);
+  const ext = path.extname(filepath);
+  const isIgnoreFile = ignoreFiles.some(
+    (ignoreFile) => ignoreFile === `*${ext}` || ignoreFile === filename // 拡張子一致もしくはファイル名一致
+  );
+  if (isIgnoreFile) return false;
+
+  return true;
+};
+```
+
+</details>
+
+テストデータで動作確認する
+
+---
+
+## AWS CodePipeline の作成と Lambda からの起動(2021/10/31~)
+
+この手順<sup>[3]</sup>を参考に作成する
+Lambda の設定
+
+```javascript
+exports.handler = async (event) => {
+  console.log({ event });
+
+  const setting = {};
+  const commits = [];
+
+  // Pipeline実行対象の判定
+  const targetRepos = setting.Services.map((service) => {
+    const isTargetRepo = getTargetRepo({ commits, service });
+    return { ...service, isTargetRepo };
+  }).filter((x) => !!x);
+
+  /* ここから追加 */
+  // Pipelineの起動
+  targetRepos.forEach((repo) =>
+    startCodePipeline({ pipelineName: repo.CodePipelineName })
+  );
+  /* ここまで追加 */
+
+  // TODO implement
+  const response = {
+    statusCode: 200,
+    body: JSON.stringify('Hello from Lambda!'),
+  };
+  return response;
+};
+```
+
+<details>
+<summary>startCodePipeline の中身は以下</summary>
+ 
+```javascript
+// Pipelineの起動
+const startCodePipeline = ({ pipelineName }) => {};
+```
+</details>
+
+IAM にて Lambda のロール設定
+
+## Lambda からキックできるかを動作確認する
+
+## S3 への json 登録(2021/10/31~)
+
+この手順<sup>[4]</sup>を参考に登録する
+
+IAM にて Lambda のロール設定
+
+Lambda から取得できるかを動作確認する
+
+---
+
+## GitHub から CodePipeline の起動
+
+---
+
+## (補足) CodeCommit の場合
+
+AWS SDK[5]で取得可能のように見える
+
+- BatchGetCommits[6]
 
 ## 実装内容と得た学び（AWS × Multirepo）
 
@@ -185,7 +349,11 @@ event
 
 ---
 
+[Back to Top](./index.md)
+
 [1]: https://blog.thundra.io/mono-or-multi-repository-a-dilemma-in-the-serverless-world
 [2]: https://blog.thundra.io/mono-or-multi-repository-a-dilemma-in-the-serverless-world
-
-[Back to Top](./index.md)
+[3]: https://aws.amazon.com/jp/codepipeline/
+[4]: https://aws.amazon.com/jp/s3/getting-started/
+[5]: https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-codecommit/index.html
+[6]: https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-codecommit/classes/batchgetcommitscommand.html

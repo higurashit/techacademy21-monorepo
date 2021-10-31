@@ -1,3 +1,8 @@
+# development
+
+memo.txt
+src
+
 # Logs
 
 logs
@@ -134,8 +139,3 @@ dist
 # TernJS port file
 
 .tern-port
-
-# development
-
-memo.txt
-src
