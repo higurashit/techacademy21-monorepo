@@ -161,9 +161,11 @@ event
 - リポジトリ名
 - ブランチ名
 - 各サービスごとの設定
-  - ディレクトリ名
-  - 無視する拡張子
-  - パイプライン名称
+  - サービス名
+  - 対象のディレクトリ名
+  - 無視する拡張子、ファイル名
+  - 無視するディレクトリ名
+  - 起動するパイプライン名称
 
 ```json
 {
@@ -214,8 +216,7 @@ exports.handler = async (event) => {
 };
 ```
 
-<details>
-<summary>getTargetRepo の中身は以下</summary>
+getTargetRepo の中身は以下の通り
 
 ```javascript
 // Pipeline実行対象の判定
@@ -253,8 +254,6 @@ const needDeploy = (filepath, ignoreFiles, ignoreDirectorys) => {
   return true;
 };
 ```
-
-</details>
 
 テストデータで動作確認する
 
@@ -294,14 +293,12 @@ exports.handler = async (event) => {
 };
 ```
 
-<details>
-<summary>startCodePipeline の中身は以下</summary>
- 
+startCodePipeline の中身は以下の通り
+
 ```javascript
 // Pipelineの起動
 const startCodePipeline = ({ pipelineName }) => {};
 ```
-</details>
 
 IAM にて Lambda のロール設定
 
