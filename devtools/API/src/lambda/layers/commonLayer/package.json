@@ -1,0 +1,6 @@
+{
+  "name":"lambda-layer",
+  "version": "1.0.0",
+  "author": "SAM CLI",
+  "license": "MIT"
+}

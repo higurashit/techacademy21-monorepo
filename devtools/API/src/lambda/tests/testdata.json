@@ -1,0 +1,73 @@
+{
+  "commitPatterns": [
+    [
+      {
+        "added": ["index.js"],
+        "modified": ["index.js"],
+        "removed": ["index.js"]
+      },
+      {
+        "added": ["index.js"],
+        "modified": ["index.js"],
+        "removed": ["index.js"]
+      }
+    ],
+    [{ "added": ["services/A/index.js"] }],
+    [{ "modified": ["services/A/index.js"] }],
+    [{ "removed": ["services/A/index.js"] }],
+    [
+      { "added": ["services/A/index.js"] },
+      { "removed": ["services/A/index.js"] }
+    ]
+  ],
+  "settings": [
+    {
+      "RepositryName": "higu/monorepo",
+      "TargetBranches": ["main", "staging", "develop"],
+      "Services": [
+        {
+          "ServiceName": "OKAZU Frontend Service",
+          "ChangeMatchExpressions": "services/Frontend/.*",
+          "IgnoreFiles": ["*.pdf", "*.md"],
+          "IgnoreDirectorys": ["Frontend/docs"],
+          "CodePipelineName": {
+            "main": "MA-higurashit-prd-Frontend-CodePipeline",
+            "staging": "MA-higurashit-stg-Frontend-CodePipeline",
+            "develop": "MA-higurashit-dev-Frontend-CodePipeline"
+          }
+        },
+        {
+          "ServiceName": "OKAZU Backend(OPEN) Service",
+          "ChangeMatchExpressions": "services/Backend-open/.*",
+          "IgnoreFiles": ["*.pdf", "*.md"],
+          "IgnoreDirectorys": ["Backend-open/docs"],
+          "CodePipelineName": {
+            "main": "MA-higurashit-prd-Backend-open-CodePipeline",
+            "staging": "MA-higurashit-stg-Backend-open-CodePipeline",
+            "develop": "MA-higurashit-dev-Backend-open-CodePipeline"
+          }
+        },
+        {
+          "ServiceName": "OKAZU Backend(ONLY MEMBER) Service",
+          "ChangeMatchExpressions": "services/Backend-only-member/.*",
+          "IgnoreFiles": ["*.pdf", "*.md"],
+          "IgnoreDirectorys": ["Backend-only-member/docs"],
+          "CodePipelineName": {
+            "main": "MA-higurashit-prd-Backend-only-CodePipeline",
+            "staging": "MA-higurashit-stg-Backend-only-CodePipeline",
+            "develop": "MA-higurashit-dev-Backend-only-CodePipeline"
+          }
+        }
+      ]
+    }
+  ],
+  "eventPatterns": [
+    {
+      "body": {
+        "repository": "",
+        "ref": "",
+        "commits": ""
+      }
+    }
+  ]
+}

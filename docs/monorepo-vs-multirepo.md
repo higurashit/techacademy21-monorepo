@@ -160,35 +160,56 @@ event
 ※ゆくゆくは S3 に登録する想定
 
 - リポジトリ名
-- ブランチ名
+- パイプラインを起動するブランチ名リスト
 - 各サービスごとの設定
   - サービス名
   - 対象のディレクトリ名
   - 無視する拡張子、ファイル名
   - 無視するディレクトリ名
-  - 起動するパイプライン名称
+  - 起動するパイプライン名称（環境ごとに指定）
 
 ```json
-{
-  "GitHubRepo": "higurashit/techacademy21-monorepo",
-  "GitHubBranch": "main",
-  "Services": [
-    {
-      "ServiceName": "Register DataA Service",
-      "ChangeMatchExpressions": "RegisterDataA/.*",
-      "IgnoreFiles": ["*.pdf", "*.md"],
-      "IgnoreDirectorys": ["RegisterDataA/docs"],
-      "CodePipelineName": "RegisterDataA - CodePipeline"
-    },
-    {
-      "ServiceName": "RegisterDataB",
-      "ChangeMatchExpressions": "RegisterDataB/.*",
-      "IgnoreFiles": ["*.pdf", "*.md"],
-      "IgnoreDirectorys": ["RegisterDataB/docs"],
-      "CodePipelineName": "RegisterDataB - CodePipeline"
-    }
-  ]
-}
+[
+  {
+    "RepositryName": "higurashit/techacademy21-monorepo",
+    "TargetBranches": ["main", "staging", "develop"],
+    "Services": [
+      {
+        "ServiceName": "OKAZU Frontend Service",
+        "ChangeMatchExpressions": "services/Frontend/.*",
+        "IgnoreFiles": ["*.pdf", "*.md"],
+        "IgnoreDirectorys": ["Frontend/docs"],
+        "CodePipelineName": {
+          "main": "MA-higurashit-prd-Frontend-CodePipeline",
+          "staging": "MA-higurashit-stg-Frontend-CodePipeline",
+          "develop": "MA-higurashit-dev-Frontend-CodePipeline"
+        }
+      },
+      {
+        "ServiceName": "OKAZU Backend(OPEN) Service",
+        "ChangeMatchExpressions": "services/Backend-open/.*",
+        "IgnoreFiles": ["*.pdf", "*.md"],
+        "IgnoreDirectorys": ["Backend-open/docs"],
+        "CodePipelineName": {
+          "main": "MA-higurashit-prd-Backend-open-CodePipeline",
+          "staging": "MA-higurashit-stg-Backend-open-CodePipeline",
+          "develop": "MA-higurashit-dev-Backend-open-CodePipeline"
+        }
+      },
+      {
+        "ServiceName": "OKAZU Backend(ONLY MEMBER) Service",
+        "ChangeMatchExpressions": "services/Backend-only-member/.*",
+        "IgnoreFiles": ["*.pdf", "*.md"],
+        "IgnoreDirectorys": ["Backend-only-member/docs"],
+        "CodePipelineName": {
+          "main": "MA-higurashit-prd-Backend-only-CodePipeline",
+          "staging": "MA-higurashit-stg-Backend-only-CodePipeline",
+          "develop": "MA-higurashit-dev-Backend-only-CodePipeline"
+        }
+      }
+    ]
+  }
+]
 ```
 
 ```javascript

@@ -1,0 +1,8 @@
+{
+  "name": "monorepo-webhook-receiver",
+  "version": "1.0.0",
+  "description": "Github Webhook を受け取り CodePipeline を起動する",
+  "main": "index.js",
+  "author": "MA-higurashit",
+  "license": "ISC"
+}
