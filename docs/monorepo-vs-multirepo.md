@@ -141,7 +141,7 @@ body の中身を確認するとコミット情報などが取得できること
 
 ```
 event
-　└ body
+　└ body(JSON format)
 　　　├ commits[0]
 　　　│　├ added:    [0] => docs/hoge.md, [1] => docs/fuga.md
 　　　│　├ removed:  [0] => docs/hoge2.md, [1] => docs/fuga2.md
@@ -154,7 +154,73 @@ event
 
 ---
 
-## Lambda 関数による更新対象の抽出(2021/10/20 ~)
+## Lambda 関数による更新対象の抽出(2021/10/20 ~ 2021/12/5)
+
+メイン処理は以下の通り
+
+- S3 から起動パイプラインの設定を取得
+- GitHub Webhook の内容からリポジトリとブランチを取得
+- GitHub Webhook の情報を元に起動が必要なパイプラインを判定
+- パイプラインの起動
+- GitHub に起動対象のパイプライン名を返却
+
+```javascript
+// メイン処理
+exports.handler = async (event) => {
+  console.log({ event });
+
+  // S3 から起動パイプラインの設定を取得
+  const settings = await getSettingsFromS3();
+
+  // GitHub Webhook の取得
+  const body = JSON.parse(event.body);
+  const { repository, ref, commits } = body;
+  console.log({ repository, ref, commits });
+
+  // GitHub Webhook の内容からリポジトリとブランチを取得
+  const { setting, error } = chooseSetting({ settings, repository, ref });
+  if (error) {
+    // リポジトリ or ブランチが対象外の場合はGitHubにその旨を返却
+    return {
+      ...commonLayer.responseCreate(200),
+      body: JSON.stringify(error.message),
+    };
+  }
+  console.log({ setting });
+  const { TargetBranch } = setting;
+
+  // GitHub Webhook の情報を元に起動が必要なパイプラインを判定
+  const needsDeployServices = setting.Services.map((service) => {
+    const needsExecute = needsExecutePipeline({ commits, service });
+    return needsExecute ? service : null;
+  }).filter((x) => !!x);
+  console.log({ needsDeployServices });
+
+  // GitHubにリリース対象が無い旨を返却（無視ファイル、無視ディレクトリ配下のみの場合）
+  if (needsDeployServices.length === 0) {
+    return {
+      ...commonLayer.responseCreate(200),
+      body: JSON.stringify('There was no release target.'),
+    };
+  }
+
+  // パイプラインの起動
+  needsDeployServices.forEach((service) =>
+    startCodePipeline({ pipelineName: service.CodePipelineName[TargetBranch] })
+  );
+
+  // GitHub に起動対象のパイプライン名を返却
+  const msg = needsDeployServices
+    .map((service) => `・${service.CodePipelineName[TargetBranch]}`)
+    .join('\n');
+  return {
+    ...commonLayer.responseCreate(200),
+    body: JSON.stringify(`Launched the following pipeline.\n${msg}`),
+  };
+};
+```
+
+getSettingsFromS3 の中身は以下の通り
 
 パイプラインを余計に動作させないように、json 形式で設定を追加する  
 ※ゆくゆくは S3 に登録する想定
@@ -168,41 +234,286 @@ event
   - 無視するディレクトリ名
   - 起動するパイプライン名称（環境ごとに指定）
 
+```javascript
+// S3から起動条件を取得
+const getSettingsFromS3 = async () => {
+  // 直接記載
+  // TODO: S3から読み込み
+  return [
+    {
+      RepositryName: 'higurashit/techacademy21-monorepo',
+      TargetBranches: ['master', 'staging', 'develop'],
+      Services: [
+        {
+          ServiceName: 'OKAZU Frontend Service',
+          ChangeMatchExpressions: ['services/Frontend/.*'],
+          IgnoreFiles: ['*.pdf', '*.md'],
+          IgnoreDirectories: ['services/Frontend/docs'],
+          CodePipelineName: {
+            master: 'MA-higurashit-prd-Frontend-CodePipeline',
+            staging: 'MA-higurashit-stg-Frontend-CodePipeline',
+            develop: 'MA-higurashit-dev-Frontend-CodePipeline',
+          },
+        },
+        {
+          ServiceName: 'OKAZU Backend(OPEN) Service',
+          ChangeMatchExpressions: ['services/Backend-open/.*'],
+          IgnoreFiles: ['*.pdf', '*.md'],
+          IgnoreDirectories: ['services/Backend-open/docs'],
+          CodePipelineName: {
+            master: 'MA-higurashit-prd-Backend-open-CodePipeline',
+            staging: 'MA-higurashit-stg-Backend-open-CodePipeline',
+            develop: 'MA-higurashit-dev-Backend-open-CodePipeline',
+          },
+        },
+        {
+          ServiceName: 'OKAZU Backend(ONLY MEMBER) Service',
+          ChangeMatchExpressions: ['services/Backend-only-member/.*'],
+          IgnoreFiles: ['*.pdf', '*.md'],
+          IgnoreDirectories: ['services/Backend-only-member/docs'],
+          CodePipelineName: {
+            master: 'MA-higurashit-prd-Backend-only-CodePipeline',
+            staging: 'MA-higurashit-stg-Backend-only-CodePipeline',
+            develop: 'MA-higurashit-dev-Backend-only-CodePipeline',
+          },
+        },
+      ],
+    },
+  ];
+};
+```
+
+chooseSetting の中身は以下の通り
+
+- S3 の設定から対象リポジトリ、対象ブランチを取得
+- 対象外の場合、エラーメッセージを返却
+
+```javascript
+// GitHub Webhook の内容からリポジトリとブランチを取得
+const chooseSetting = ({ settings, repository, ref }) => {
+  // 対象リポジトリの取得
+  const targetRepoSetting = settings.filter((setting) => {
+    console.log({ repository, setting });
+    return repository.full_name === setting.RepositryName;
+  })[0];
+  console.log({ targetRepoSetting });
+
+  if (targetRepoSetting.length === 0) {
+    // リポジトリが対象外の場合
+    return {
+      error: {
+        message: `${repository.full_name} repository is not the target.`,
+      },
+    };
+  }
+  // 対象ブランチの取得
+  const branchName = ref.replace('refs/heads/', '');
+  const targetBranch = targetRepoSetting.TargetBranches.filter(
+    (branch) => branch === branchName
+  );
+  console.log({ targetBranch });
+
+  if (targetBranch.length === 0) {
+    // ブランチが対象外の場合
+    return {
+      error: { message: `${branchName} branch is not the target.` },
+    };
+  }
+
+  return {
+    setting: {
+      ...targetRepoSetting,
+      TargetBranch: branchName,
+    },
+  };
+};
+```
+
+needsExecutePipeline の中身は以下の通り
+
+- コミット情報（複数）とサービスの起動情報を受け取る（対象ディレクトリ、無視ディレクトリ、無視ファイル）
+- 各コミットのうち 1 コミットでもリリース対象があれば true を返却する
+- 全コミットの全ファイルが対象外の場合、false を返却する
+
+```javascript
+// GitHub Webhook の情報を元に起動が必要なパイプラインを判定
+const needsExecutePipeline = ({ commits, service }) => {
+  // S3の設定から無視ファイル、無視ディレクトリを取得
+  const { ChangeMatchExpressions, IgnoreFiles, IgnoreDirectories } = service;
+
+  // 各コミットのうち1つでも対象であればtrueを返す
+  return commits.some((commit) => {
+    const added = commit.added ? commit.added : [];
+    const removed = commit.removed ? commit.removed : [];
+    const modified = commit.modified ? commit.modified : [];
+    // 各ファイルのうち1つでも対象であればtrueを返す
+    return [...added, ...removed, ...modified].some((file) =>
+      needDeploy(file, ChangeMatchExpressions, IgnoreFiles, IgnoreDirectories)
+    );
+  });
+};
+
+// ファイルが対象かどうかを判定
+const needDeploy = (
+  filepath,
+  ChangeMatchExpressions,
+  ignoreFiles,
+  ignoreDirectories
+) => {
+  // 対象のディレクトリ（ChangeMatchExpressions）に含まれているかを判定
+  const isMatchExpressions = ChangeMatchExpressions.some((expression) => {
+    const reg = new RegExp(`^${expression}`);
+    return !!filepath.match(reg);
+  });
+  // リリース対象ディレクトリに含まれていない場合
+  if (!isMatchExpressions) return false;
+
+  // 無視対象のディレクトリ（IgnoreDirectories）に含まれているかを判定
+  const isIgnoreDirectory = ignoreDirectories.some((ignoreDirectory) => {
+    const reg = new RegExp(`^${ignoreDirectory}($|/)`);
+    return !!filepath.match(reg);
+  });
+  // 無視ディレクトリに含まれている場合
+  if (isIgnoreDirectory) return false;
+
+  // 無視対象のファイル（IgnoreFiles）かを判定
+  const filename = path.basename(filepath);
+  const ext = path.extname(filepath);
+  const isIgnoreFile = ignoreFiles.some(
+    (ignoreFile) => ignoreFile === `*${ext}` || ignoreFile === filename // 拡張子一致もしくはファイル名一致
+  );
+  // 無視ファイルに含まれている場合
+  if (isIgnoreFile) return false;
+
+  // 全てクリアの場合はリリース対象
+  return true;
+};
+```
+
+startCodePipeline の中身は以下の通り（一旦空で設定）
+
+```javascript
+// Pipelineの起動
+const startCodePipeline = ({ pipelineName }) => {};
+```
+
+Lambda Layer で定義している commonLayer の中身は以下の通り（他の Lambda でも利用する可能性があるため Layer 化）
+
+- Lambda プロキシ統合レスポンスを作成する（200, 400, 500 の設定を用意）
+
+```javascript
+const aws = require('aws-sdk');
+
+aws.config.region = 'ap-northeast-1';
+const s3 = new aws.S3();
+
+// 環境設定
+let isSandBox = false;
+isSandBox = !!process.env.ENV
+  ? process.env.ENV === 'tmp' || process.env.ENV === 'dev'
+    ? true
+    : false
+  : false;
+
+module.exports = {
+  // Lambdaプロキシ統合レスポンスの作成
+  responseCreate: (statusCode) => {
+    const defaultResponse = isSandBox
+      ? { headers: { 'Access-Control-Allow-Origin': '*' } }
+      : {};
+    switch (statusCode) {
+      case 200:
+        return { ...defaultResponse, statusCode: 200 };
+      case 400:
+        return {
+          ...defaultResponse,
+          statusCode: 400,
+          body: JSON.stringify({ message: 'Bad Request' }),
+        };
+      case 500:
+        return {
+          ...defaultResponse,
+          statusCode: 500,
+          body: JSON.stringify({ message: 'Internal Server Error' }),
+        };
+      default:
+        return {
+          ...defaultResponse,
+          statusCode: 555,
+          body: JSON.stringify({
+            message: 'Creating a response with the wrong settings',
+          }),
+        };
+    }
+  },
+};
+```
+
+---
+
+## GitHub Webhook の動作テスト ②(2021/12/5)
+
+- Lambda のテストにて event.body の値を変えてテスト
+  - typo, 英語誤りが多く何度か修正
+  - 問題なく動作することを確認
+    - リリース対象あり時：`"Launched the following pipeline.\n・MA-higurashit-prd-Frontend-CodePipeline"`
+    - リリース対象なし時：`"There was no release target."`
+- GitHub Webhook 経由で何度か Push, Commit を繰り返してテスト
+  - Webhook 内の commit のファイルパスの形式を勘違いしており修正
+  - Lambda 単体テストと同様に問題なく動作することを確認
+    - ![webhook-deploy](./assets/monorepo-vs-multirepo/webhook-deploy.png)
+    - ![webhook-no-deploy](./assets/monorepo-vs-multirepo/webhook-no-deploy.png)
+
+---
+
+## 設定情報の S3 移行（2021/12/5）
+
+設定情報格納用の S3 を作成する  
+バケット名：`ma-higurashit-github-resolver-settings`
+
+すべてデフォルト設定で作成する
+![create-s3](./assets/monorepo-vs-multirepo/create-s3.png)
+
+設定用 JSON を格納
+![upload-s3](./assets/monorepo-vs-multirepo/upload-s3.png)
+
+settings.json の内容は以下の通り
+
 ```json
 [
   {
     "RepositryName": "higurashit/techacademy21-monorepo",
-    "TargetBranches": ["main", "staging", "develop"],
+    "TargetBranches": ["master", "staging", "develop"],
     "Services": [
       {
         "ServiceName": "OKAZU Frontend Service",
-        "ChangeMatchExpressions": "services/Frontend/.*",
+        "ChangeMatchExpressions": ["services/Frontend/.*"],
         "IgnoreFiles": ["*.pdf", "*.md"],
-        "IgnoreDirectorys": ["Frontend/docs"],
+        "IgnoreDirectories": ["services/Frontend/docs"],
         "CodePipelineName": {
-          "main": "MA-higurashit-prd-Frontend-CodePipeline",
+          "master": "MA-higurashit-prd-Frontend-CodePipeline",
           "staging": "MA-higurashit-stg-Frontend-CodePipeline",
           "develop": "MA-higurashit-dev-Frontend-CodePipeline"
         }
       },
       {
         "ServiceName": "OKAZU Backend(OPEN) Service",
-        "ChangeMatchExpressions": "services/Backend-open/.*",
+        "ChangeMatchExpressions": ["services/Backend-open/.*"],
         "IgnoreFiles": ["*.pdf", "*.md"],
-        "IgnoreDirectorys": ["Backend-open/docs"],
+        "IgnoreDirectories": ["services/Backend-open/docs"],
         "CodePipelineName": {
-          "main": "MA-higurashit-prd-Backend-open-CodePipeline",
+          "master": "MA-higurashit-prd-Backend-open-CodePipeline",
           "staging": "MA-higurashit-stg-Backend-open-CodePipeline",
           "develop": "MA-higurashit-dev-Backend-open-CodePipeline"
         }
       },
       {
         "ServiceName": "OKAZU Backend(ONLY MEMBER) Service",
-        "ChangeMatchExpressions": "services/Backend-only-member/.*",
+        "ChangeMatchExpressions": ["services/Backend-only-member/.*"],
         "IgnoreFiles": ["*.pdf", "*.md"],
-        "IgnoreDirectorys": ["Backend-only-member/docs"],
+        "IgnoreDirectories": ["services/Backend-only-member/docs"],
         "CodePipelineName": {
-          "main": "MA-higurashit-prd-Backend-only-CodePipeline",
+          "master": "MA-higurashit-prd-Backend-only-CodePipeline",
           "staging": "MA-higurashit-stg-Backend-only-CodePipeline",
           "develop": "MA-higurashit-dev-Backend-only-CodePipeline"
         }
@@ -212,74 +523,29 @@ event
 ]
 ```
 
-```javascript
-exports.handler = async (event) => {
-  console.log({ event });
-
-  /* ここから追加 */
-  const setting = {}; // 直接記載(いずれS3)
-  const commits = []; // 直接記載(いずれGitHub経由)
-
-  // Pipeline実行対象の判定
-  const targetRepos = setting.Services.map((service) => {
-    const isTargetRepo = getTargetRepo({ commits, service });
-    return { ...service, isTargetRepo };
-  }).filter((x) => !!x);
-
-  console.log({ targetRepos });
-  /* ここまで追加 */
-
-  // TODO implement
-  const response = {
-    statusCode: 200,
-    body: JSON.stringify('Hello from Lambda!'),
-  };
-  return response;
-};
-```
-
-getTargetRepo の中身は以下の通り
+Lambda から S3 にアクセスできるようにする
 
 ```javascript
-// Pipeline実行対象の判定
-const getTargetRepo = ({ commits, service }) => {
-  // 無視ファイル、無視ディレクトリを取得
-  const { IgnoreFiles, IgnoreDirectorys } = service;
+// aws-sdkを利用してS3にアクセス
+const aws = require('aws-sdk');
+aws.config.region = 'ap-northeast-1';
+const s3 = new aws.S3();
 
-  // 各コミットのうち1つでも対象であればtrueを返す
-  return commits.some((commit) => {
-    const { added, removed, modified } = commit;
-    // 各ファイルのうち1つでも対象であればtrueを返す
-    return [...added, ...removed, ...modified].some((file) =>
-      needDeploy(file, IgnoreFiles, IgnoreDirectorys)
-    );
-  });
-};
+～中略～
 
-// ファイルが対象かどうかを判定
-const needDeploy = (filepath, ignoreFiles, ignoreDirectorys) => {
-  // 無視対象のディレクトリに含まれているかを判定
-  const isIgnoreDirectory = ignoreDirectorys.some((ignoreDirectory) => {
-    const reg = new RegExp(`^${ignoreDirectory}`);
-    return !!filepath.match(reg);
-  });
-  if (isIgnoreDirectory) return false;
-
-  // 無視対象のファイルかを判定
-  const filename = path.basename(filepath);
-  const ext = path.extname(filepath);
-  const isIgnoreFile = ignoreFiles.some(
-    (ignoreFile) => ignoreFile === `*${ext}` || ignoreFile === filename // 拡張子一致もしくはファイル名一致
-  );
-  if (isIgnoreFile) return false;
-
-  return true;
+// S3から起動条件を取得
+const getSettingsFromS3 = async () => {
+  await basicLayer.valueCheck
+  valueCheck: async(value) => {
+        const data = await s3.getObject({
+            Bucket: exFileProp.bucketName,
+            Key: exFileProp.bizsysAppTemplateValueFileName
+        }).promise();
+        const obj = JSON.parse(data.Body);
+        return Boolean(value in obj);
+    },
 };
 ```
-
-テストデータで動作確認する
-
----
 
 ## AWS CodePipeline の作成と Lambda からの起動(2021/10/31~)
 
