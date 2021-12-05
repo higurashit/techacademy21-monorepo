@@ -1,5 +1,10 @@
 const path = require('path');
 
+// aws-sdkを利用してS3にアクセス
+const aws = require('aws-sdk');
+aws.config.region = 'ap-northeast-1';
+const s3 = new aws.S3();
+
 // Layer読み込み
 // TODO: node_modules配下に作成するとcommonLayerのみで読み込める
 const commonLayer = require('/opt/nodejs/commonLayer');
@@ -59,49 +64,12 @@ exports.handler = async (event) => {
 
 // S3から起動条件を取得
 const getSettingsFromS3 = async () => {
-  // 直接記載
-  // TODO: S3から読み込み
-  return [
-    {
-      RepositryName: 'higurashit/techacademy21-monorepo',
-      TargetBranches: ['master', 'staging', 'develop'],
-      Services: [
-        {
-          ServiceName: 'OKAZU Frontend Service',
-          ChangeMatchExpressions: ['services/Frontend/.*'],
-          IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectories: ['services/Frontend/docs'],
-          CodePipelineName: {
-            master: 'MA-higurashit-prd-Frontend-CodePipeline',
-            staging: 'MA-higurashit-stg-Frontend-CodePipeline',
-            develop: 'MA-higurashit-dev-Frontend-CodePipeline',
-          },
-        },
-        {
-          ServiceName: 'OKAZU Backend(OPEN) Service',
-          ChangeMatchExpressions: ['services/Backend-open/.*'],
-          IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectories: ['services/Backend-open/docs'],
-          CodePipelineName: {
-            master: 'MA-higurashit-prd-Backend-open-CodePipeline',
-            staging: 'MA-higurashit-stg-Backend-open-CodePipeline',
-            develop: 'MA-higurashit-dev-Backend-open-CodePipeline',
-          },
-        },
-        {
-          ServiceName: 'OKAZU Backend(ONLY MEMBER) Service',
-          ChangeMatchExpressions: ['services/Backend-only-member/.*'],
-          IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectories: ['services/Backend-only-member/docs'],
-          CodePipelineName: {
-            master: 'MA-higurashit-prd-Backend-only-CodePipeline',
-            staging: 'MA-higurashit-stg-Backend-only-CodePipeline',
-            develop: 'MA-higurashit-dev-Backend-only-CodePipeline',
-          },
-        },
-      ],
-    },
-  ];
+  const settingsFile = {
+    Bucket: 'ma-higurashit-github-resolver-settings',
+    Key: 'settings.json',
+  };
+  const data = await s3.getObject(settingsFile).promise();
+  return JSON.parse(data.Body);
 };
 
 // GitHub Webhook の内容からリポジトリとブランチを取得

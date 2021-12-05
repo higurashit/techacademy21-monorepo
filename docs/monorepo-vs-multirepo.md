@@ -531,21 +531,37 @@ const aws = require('aws-sdk');
 aws.config.region = 'ap-northeast-1';
 const s3 = new aws.S3();
 
-～中略～
+~ 中略 ~
 
 // S3から起動条件を取得
 const getSettingsFromS3 = async () => {
-  await basicLayer.valueCheck
-  valueCheck: async(value) => {
-        const data = await s3.getObject({
-            Bucket: exFileProp.bucketName,
-            Key: exFileProp.bizsysAppTemplateValueFileName
-        }).promise();
-        const obj = JSON.parse(data.Body);
-        return Boolean(value in obj);
-    },
+  const settingsFile = {
+    Bucket: 'ma-higurashit-github-resolver-settings',
+    Key: 'settings.json',
+  };
+  const data = await s3.getObject(settingsFile).promise();
+  return JSON.parse(data.Body);
 };
+
 ```
+
+動作確認（アクセス権限エラーの確認）  
+Lambda→S3 へのアクセス権限がないためエラーとなる
+![lambda-access-denied](./assets/monorepo-vs-multirepo/lambda-access-denied.png)
+
+Lambda に S3 へのアクセス権限を付与  
+実行ロールである `MA-higurashit-github-resolver-role-ozdom48y` に権限を追加
+
+- 読み込み権限のみ
+- バケットは `ma-higurashit-github-resolver-settings` のみ
+- ファイルは `settings.json` のみ
+  ![iam-lambda-to-s3_1](./assets/monorepo-vs-multirepo/iam-lambda-to-s3_1.png)
+
+動作確認（アクセス権限エラーが出なくなったことの確認）  
+正常終了を確認
+![lambda-access-success](./assets/monorepo-vs-multirepo/lambda-access-success.png)
+
+---
 
 ## AWS CodePipeline の作成と Lambda からの起動(2021/10/31~)
 
