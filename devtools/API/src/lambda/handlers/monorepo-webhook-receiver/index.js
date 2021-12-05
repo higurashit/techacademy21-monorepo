@@ -1,5 +1,8 @@
 const path = require('path');
-// const commonLayer = require('commonLayer');
+
+// Layer読み込み
+// TODO: node_modules配下に作成するとcommonLayerのみで読み込める
+const commonLayer = require('/opt/nodejs/commonLayer');
 
 // メイン処理
 exports.handler = async (event) => {
@@ -7,16 +10,19 @@ exports.handler = async (event) => {
 
   /* ここから追加 */
   const settings = getSettingsFromS3();
-  const { repositry, ref, commits } = event.body;
+  const { repository, ref, commits } = event.body;
+  console.log({ repository, ref, commits });
 
   // 対象リポジトリとブランチを取得
-  const { setting, error } = chooseSetting({ settings, repositry, ref });
+  const { setting, error } = chooseSetting({ settings, repository, ref });
   if (error) {
     return {
       ...commonLayer.responseCreate(200),
       body: JSON.stringify(error.message),
     };
   }
+  console.log({ setting });
+  const { TargetBranch } = setting;
 
   // Pipeline実行対象の判定
   const needsDeployServices = setting.Services.map((service) => {
@@ -27,7 +33,7 @@ exports.handler = async (event) => {
   console.log({ needsDeployServices });
 
   needsDeployServices.forEach((service) =>
-    startCodePipeline({ pipelineName: service.CodePipelineName })
+    startCodePipeline({ pipelineName: service.CodePipelineName[TargetBranch] })
   );
 
   // GitHubにリリース対象なしを返却
@@ -40,7 +46,7 @@ exports.handler = async (event) => {
 
   // GitHubにリリース対象ありを返却
   const msg = needsDeployServices
-    .map((service) => `・${service.CodePipelineName}`)
+    .map((service) => `・${service.CodePipelineName[TargetBranch]}`)
     .join('\n');
   return {
     ...commonLayer.responseCreate(200),
@@ -49,16 +55,18 @@ exports.handler = async (event) => {
 };
 
 // 入力チェック
-const chooseSetting = ({ settings, repositry, ref }) => {
+const chooseSetting = ({ settings, repository, ref }) => {
   // 対象リポジトリの取得
   const targetRepoSetting = settings.filter((setting) => {
-    console.log({ repositry, setting });
-    return repositry.full_name === setting.RepositryName;
+    console.log({ repository, setting });
+    return repository.full_name === setting.RepositryName;
   })[0];
   console.log({ targetRepoSetting });
   if (targetRepoSetting.length === 0) {
     return {
-      error: { message: `${repositry.full_name} repositry is not the target.` },
+      error: {
+        message: `${repository.full_name} repository is not the target.`,
+      },
     };
   }
   // 対象ブランチの取得
@@ -83,41 +91,42 @@ const chooseSetting = ({ settings, repositry, ref }) => {
 
 // S3から起動条件を取得
 const getSettingsFromS3 = () => {
-  // 直接記載(いずれS3)
+  // 直接記載
+  // TODO: S3から読み込み
   return [
     {
       RepositryName: 'higurashit/techacademy21-monorepo',
-      TargetBranches: ['main', 'staging', 'develop'],
+      TargetBranches: ['master', 'staging', 'develop'],
       Services: [
         {
           ServiceName: 'OKAZU Frontend Service',
-          ChangeMatchExpressions: 'services/Frontend/.*',
+          ChangeMatchExpressions: ['services/Frontend/.*'],
           IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectorys: ['Frontend/docs'],
+          IgnoreDirectories: ['Frontend/docs'],
           CodePipelineName: {
-            main: 'MA-higurashit-prd-Frontend-CodePipeline',
+            master: 'MA-higurashit-prd-Frontend-CodePipeline',
             staging: 'MA-higurashit-stg-Frontend-CodePipeline',
             develop: 'MA-higurashit-dev-Frontend-CodePipeline',
           },
         },
         {
           ServiceName: 'OKAZU Backend(OPEN) Service',
-          ChangeMatchExpressions: 'services/Backend-open/.*',
+          ChangeMatchExpressions: ['services/Backend-open/.*'],
           IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectorys: ['Backend-open/docs'],
+          IgnoreDirectories: ['Backend-open/docs'],
           CodePipelineName: {
-            main: 'MA-higurashit-prd-Backend-open-CodePipeline',
+            master: 'MA-higurashit-prd-Backend-open-CodePipeline',
             staging: 'MA-higurashit-stg-Backend-open-CodePipeline',
             develop: 'MA-higurashit-dev-Backend-open-CodePipeline',
           },
         },
         {
           ServiceName: 'OKAZU Backend(ONLY MEMBER) Service',
-          ChangeMatchExpressions: 'services/Backend-only-member/.*',
+          ChangeMatchExpressions: ['services/Backend-only-member/.*'],
           IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectorys: ['Backend-only-member/docs'],
+          IgnoreDirectories: ['Backend-only-member/docs'],
           CodePipelineName: {
-            main: 'MA-higurashit-prd-Backend-only-CodePipeline',
+            master: 'MA-higurashit-prd-Backend-only-CodePipeline',
             staging: 'MA-higurashit-stg-Backend-only-CodePipeline',
             develop: 'MA-higurashit-dev-Backend-only-CodePipeline',
           },
