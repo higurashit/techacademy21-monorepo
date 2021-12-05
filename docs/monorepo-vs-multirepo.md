@@ -565,44 +565,53 @@ Lambda に S3 へのアクセス権限を付与
 
 ## AWS CodePipeline の作成と Lambda からの起動(2021/10/31~)
 
-この手順<sup>[3]</sup>を参考に Codepipeline を作成する
+デプロイ用の S3 を作成する（手順は省略）  
+`ma-higurashit-frontend-contents`
 
-Lambda の設定
+Codepipeline を作成する  
+`MA-higurashit-prd-Frontend-CodePipeline`
 
-```javascript
-exports.handler = async (event) => {
-  console.log({ event });
+- ソースステージは適当に S3 の `ma-higurashit-github-resolver-settings/settings.json` を設定する
+- ビルドステージはスキップ
+- デプロイステージは `ma-higurashit-frontend-contents` を設定する
+- ハマったこと
+  - ロール名がデフォルトじゃないとエラーになる（AWSCodePipelineServiceRole-MA-higurashit-prd-Fro）
 
-  const setting = {};
-  const commits = [];
+![create-codepipeline](./assets/monorepo-vs-multirepo/create-codepipeline.png)
 
-  // Pipeline実行対象の判定
-  const targetRepos = setting.Services.map((service) => {
-    const isTargetRepo = getTargetRepo({ commits, service });
-    return { ...service, isTargetRepo };
-  }).filter((x) => !!x);
+ソースアクションでは AWS と GitHub の接続を行う
+接続名は `MA-higurashit-prd-Fro-connect` (32 文字以下)
+![aws-github-connect](./assets/monorepo-vs-multirepo/aws-github-connect.png)
 
-  /* ここから追加 */
-  // Pipelineの起動
-  targetRepos.forEach((repo) =>
-    startCodePipeline({ pipelineName: repo.CodePipelineName })
-  );
-  /* ここまで追加 */
+「ソースコードの変更時にパイプラインを開始する」はオフにする（手動実行のため）
+![create-codepipeline-source](./assets/monorepo-vs-multirepo/create-codepipeline-source.png)
 
-  // TODO implement
-  const response = {
-    statusCode: 200,
-    body: JSON.stringify('Hello from Lambda!'),
-  };
-  return response;
-};
-```
+初回実行は成功（GitHub ソースをまるごとコピーするだけ）
+![codepipeline_1](./assets/monorepo-vs-multirepo/codepipeline_1.png)
 
-startCodePipeline の中身は以下の通り
+Lambda から CodePipeline を起動できるようにする  
+aws-sdk の [この API](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/CodePipeline.html#startPipelineExecution-property) を利用する
 
 ```javascript
+const codepipeline = new aws.CodePipeline();
+
+~ 中略 ~
+
 // Pipelineの起動
-const startCodePipeline = ({ pipelineName }) => {};
+const startCodePipeline = ({ pipelineName }) => {
+  const params = {
+    name: pipelineName,
+  };
+  const data = codepipeline.startPipelineExecution(
+    params,
+    function (err, data) {
+      console.log({ err, data });
+      if (err) console.log(err, err.stack);
+      // an error occurred
+      else console.log(data); // successful response
+    }
+  );
+};
 ```
 
 IAM にて Lambda のロール設定

@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  checkTemplateValueFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handlers/checkTemplateValue/
+      Handler: checkTemplateValue.lambdaHandler
+      Runtime: nodejs14.x
+      Layers:
+        - !Ref MyLayer
+      Events:
+        checkTemplateValue:
+          Type: Api
+          Properties:
+            Path: /checkTemplateValue
+            Method: get
+  PutBizsysAppTemplateAPIFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handlers/putBizsysAppTemplateAPI/
+      Handler: putBizsysAppTemplateAPI.lambdaHandler
+      Runtime: nodejs14.x
+      Layers:
+        - !Ref MyLayer
+      Events:
+        PutBizsysAppTemplateAPI:
+          Type: Api
+          Properties:
+            Path: /putBizsysAppTemplateAPI
+            Method: post
+  MyLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: layers
+      ContentUri: 'layers/basicLayer/'
+      CompatibleRuntimes:
+        - nodejs14.x
+      Metadata:
+        BuildMethod: nodejs14.x
