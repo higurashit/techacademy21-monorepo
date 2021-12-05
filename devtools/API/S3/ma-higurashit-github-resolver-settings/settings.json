@@ -1,0 +1,41 @@
+[
+  {
+    "RepositryName": "higurashit/techacademy21-monorepo",
+    "TargetBranches": ["master", "staging", "develop"],
+    "Services": [
+      {
+        "ServiceName": "OKAZU Frontend Service",
+        "ChangeMatchExpressions": ["services/Frontend/.*"],
+        "IgnoreFiles": ["*.pdf", "*.md"],
+        "IgnoreDirectories": ["services/Frontend/docs"],
+        "CodePipelineName": {
+          "master": "MA-higurashit-prd-Frontend-CodePipeline",
+          "staging": "MA-higurashit-stg-Frontend-CodePipeline",
+          "develop": "MA-higurashit-dev-Frontend-CodePipeline"
+        }
+      },
+      {
+        "ServiceName": "OKAZU Backend(OPEN) Service",
+        "ChangeMatchExpressions": ["services/Backend-open/.*"],
+        "IgnoreFiles": ["*.pdf", "*.md"],
+        "IgnoreDirectories": ["services/Backend-open/docs"],
+        "CodePipelineName": {
+          "master": "MA-higurashit-prd-Backend-open-CodePipeline",
+          "staging": "MA-higurashit-stg-Backend-open-CodePipeline",
+          "develop": "MA-higurashit-dev-Backend-open-CodePipeline"
+        }
+      },
+      {
+        "ServiceName": "OKAZU Backend(ONLY MEMBER) Service",
+        "ChangeMatchExpressions": ["services/Backend-only-member/.*"],
+        "IgnoreFiles": ["*.pdf", "*.md"],
+        "IgnoreDirectories": ["services/Backend-only-member/docs"],
+        "CodePipelineName": {
+          "master": "MA-higurashit-prd-Backend-only-CodePipeline",
+          "staging": "MA-higurashit-stg-Backend-only-CodePipeline",
+          "develop": "MA-higurashit-dev-Backend-only-CodePipeline"
+        }
+      }
+    ]
+  }
+]
