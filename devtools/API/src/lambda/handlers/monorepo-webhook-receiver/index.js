@@ -8,13 +8,15 @@ const commonLayer = require('/opt/nodejs/commonLayer');
 exports.handler = async (event) => {
   console.log({ event });
 
-  /* ここから追加 */
-  const settings = getSettingsFromS3();
+  // S3 から起動パイプラインの設定を取得
+  const settings = await getSettingsFromS3();
+
+  // GitHub Webhook の取得
   const body = JSON.parse(event.body);
   const { repository, ref, commits } = body;
   console.log({ repository, ref, commits });
 
-  // 対象リポジトリとブランチを取得
+  // GitHub Webhook の内容からリポジトリとブランチを取得
   const { setting, error } = chooseSetting({ settings, repository, ref });
   if (error) {
     return {
@@ -25,19 +27,14 @@ exports.handler = async (event) => {
   console.log({ setting });
   const { TargetBranch } = setting;
 
-  // Pipeline実行対象の判定
+  // GitHub Webhook の情報を元に起動が必要なパイプラインを判定
   const needsDeployServices = setting.Services.map((service) => {
     const needsExecute = needsExecutePipeline({ commits, service });
     return needsExecute ? service : null;
   }).filter((x) => !!x);
-
   console.log({ needsDeployServices });
 
-  needsDeployServices.forEach((service) =>
-    startCodePipeline({ pipelineName: service.CodePipelineName[TargetBranch] })
-  );
-
-  // GitHubにリリース対象なしを返却
+  // GitHubにリリース対象が無い旨を返却（無視ファイル、無視ディレクトリ配下のみの場合）
   if (needsDeployServices.length === 0) {
     return {
       ...commonLayer.responseCreate(200),
@@ -45,7 +42,12 @@ exports.handler = async (event) => {
     };
   }
 
-  // GitHubにリリース対象ありを返却
+  // パイプラインの起動
+  needsDeployServices.forEach((service) =>
+    startCodePipeline({ pipelineName: service.CodePipelineName[TargetBranch] })
+  );
+
+  // GitHub に起動対象のパイプライン名を返却
   const msg = needsDeployServices
     .map((service) => `・${service.CodePipelineName[TargetBranch]}`)
     .join('\n');
@@ -55,43 +57,8 @@ exports.handler = async (event) => {
   };
 };
 
-// 入力チェック
-const chooseSetting = ({ settings, repository, ref }) => {
-  // 対象リポジトリの取得
-  const targetRepoSetting = settings.filter((setting) => {
-    console.log({ repository, setting });
-    return repository.full_name === setting.RepositryName;
-  })[0];
-  console.log({ targetRepoSetting });
-  if (targetRepoSetting.length === 0) {
-    return {
-      error: {
-        message: `${repository.full_name} repository is not the target.`,
-      },
-    };
-  }
-  // 対象ブランチの取得
-  const branchName = ref.replace('refs/heads/', '');
-  const targetBranch = targetRepoSetting.TargetBranches.filter(
-    (branch) => branch === branchName
-  );
-  console.log({ targetBranch });
-  if (targetBranch.length === 0) {
-    return {
-      error: { message: `${branchName} branch is not the target.` },
-    };
-  }
-
-  return {
-    setting: {
-      ...targetRepoSetting,
-      TargetBranch: branchName,
-    },
-  };
-};
-
 // S3から起動条件を取得
-const getSettingsFromS3 = () => {
+const getSettingsFromS3 = async () => {
   // 直接記載
   // TODO: S3から読み込み
   return [
@@ -137,7 +104,46 @@ const getSettingsFromS3 = () => {
   ];
 };
 
-// Pipeline実行対象の判定
+// GitHub Webhook の内容からリポジトリとブランチを取得
+const chooseSetting = ({ settings, repository, ref }) => {
+  // 対象リポジトリの取得
+  const targetRepoSetting = settings.filter((setting) => {
+    console.log({ repository, setting });
+    return repository.full_name === setting.RepositryName;
+  })[0];
+  console.log({ targetRepoSetting });
+
+  if (targetRepoSetting.length === 0) {
+    // リポジトリが対象外の場合
+    return {
+      error: {
+        message: `${repository.full_name} repository is not the target.`,
+      },
+    };
+  }
+  // 対象ブランチの取得
+  const branchName = ref.replace('refs/heads/', '');
+  const targetBranch = targetRepoSetting.TargetBranches.filter(
+    (branch) => branch === branchName
+  );
+  console.log({ targetBranch });
+
+  if (targetBranch.length === 0) {
+    // ブランチが対象外の場合
+    return {
+      error: { message: `${branchName} branch is not the target.` },
+    };
+  }
+
+  return {
+    setting: {
+      ...targetRepoSetting,
+      TargetBranch: branchName,
+    },
+  };
+};
+
+// GitHub Webhook の情報を元に起動が必要なパイプラインを判定
 const needsExecutePipeline = ({ commits, service }) => {
   // 無視ファイル、無視ディレクトリを取得
   const { ChangeMatchExpressions, IgnoreFiles, IgnoreDirectories } = service;

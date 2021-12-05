@@ -2,6 +2,8 @@ const aws = require('aws-sdk');
 
 aws.config.region = 'ap-northeast-1';
 const s3 = new aws.S3();
+
+// 環境設定
 let isSandBox = false;
 isSandBox = !!process.env.ENV
   ? process.env.ENV === 'tmp' || process.env.ENV === 'dev'
@@ -10,6 +12,7 @@ isSandBox = !!process.env.ENV
   : false;
 
 module.exports = {
+  // Lambdaプロキシ統合レスポンスの作成
   responseCreate: (statusCode) => {
     const defaultResponse = isSandBox
       ? { headers: { 'Access-Control-Allow-Origin': '*' } }
