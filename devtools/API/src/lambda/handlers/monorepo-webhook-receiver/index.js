@@ -10,7 +10,8 @@ exports.handler = async (event) => {
 
   /* ここから追加 */
   const settings = getSettingsFromS3();
-  const { repository, ref, commits } = event.body;
+  const body = JSON.parse(event.body);
+  const { repository, ref, commits } = body;
   console.log({ repository, ref, commits });
 
   // 対象リポジトリとブランチを取得
