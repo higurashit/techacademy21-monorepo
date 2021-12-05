@@ -103,7 +103,7 @@ const getSettingsFromS3 = () => {
           ServiceName: 'OKAZU Frontend Service',
           ChangeMatchExpressions: ['services/Frontend/.*'],
           IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectories: ['Frontend/docs'],
+          IgnoreDirectories: ['services/Frontend/docs'],
           CodePipelineName: {
             master: 'MA-higurashit-prd-Frontend-CodePipeline',
             staging: 'MA-higurashit-stg-Frontend-CodePipeline',
@@ -114,7 +114,7 @@ const getSettingsFromS3 = () => {
           ServiceName: 'OKAZU Backend(OPEN) Service',
           ChangeMatchExpressions: ['services/Backend-open/.*'],
           IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectories: ['Backend-open/docs'],
+          IgnoreDirectories: ['services/Backend-open/docs'],
           CodePipelineName: {
             master: 'MA-higurashit-prd-Backend-open-CodePipeline',
             staging: 'MA-higurashit-stg-Backend-open-CodePipeline',
@@ -125,7 +125,7 @@ const getSettingsFromS3 = () => {
           ServiceName: 'OKAZU Backend(ONLY MEMBER) Service',
           ChangeMatchExpressions: ['services/Backend-only-member/.*'],
           IgnoreFiles: ['*.pdf', '*.md'],
-          IgnoreDirectories: ['Backend-only-member/docs'],
+          IgnoreDirectories: ['services/Backend-only-member/docs'],
           CodePipelineName: {
             master: 'MA-higurashit-prd-Backend-only-CodePipeline',
             staging: 'MA-higurashit-stg-Backend-only-CodePipeline',
