@@ -563,7 +563,7 @@ Lambda に S3 へのアクセス権限を付与
 
 ---
 
-## AWS CodePipeline の作成と Lambda からの起動(2021/10/31~)
+## AWS CodePipeline の作成と Lambda からの起動(2021/10/31~12/19)
 
 デプロイ用の S3 を作成する（手順は省略）  
 `ma-higurashit-frontend-contents`
@@ -598,41 +598,56 @@ const codepipeline = new aws.CodePipeline();
 ~ 中略 ~
 
 // Pipelineの起動
-const startCodePipeline = ({ pipelineName }) => {
+const startCodePipeline = async ({ pipelineName }) => {
   const params = {
     name: pipelineName,
   };
-  const data = codepipeline.startPipelineExecution(
-    params,
-    function (err, data) {
-      console.log({ err, data });
-      if (err) console.log(err, err.stack);
-      // an error occurred
-      else console.log(data); // successful response
-    }
-  );
+  await codepipeline.startPipelineExecution(params).promise();
 };
 ```
 
-IAM にて Lambda のロール設定
+一旦動作確認するとエラーが計測されずに動作もしていない…
 
-動作確認する
+[この記事](https://dev.classmethod.jp/articles/foreach-async-await/)を見ると forEach は promise を待たないという情報あり
 
-## S3 への json 登録(2021/10/31~)
+記事の通り Promise.all を使うように変更
 
-この手順<sup>[4]</sup>を参考に登録する
+```
+  // パイプラインの起動
+  needsDeployServices.forEach((service) =>
+    startCodePipeline({ pipelineName: service.CodePipelineName[TargetBranch] })
+  );
+```
 
-IAM にて Lambda のロール設定
+↓
 
-動作確認する
+```
+  // パイプラインの起動
+  const tasks = needsDeployServices.map((service) =>
+    startCodePipeline({ pipelineName: service.CodePipelineName[TargetBranch]})
+  );
+  const ret = Promise.all(tasks);
+```
+
+再度実行をしてみると AccessDeniedException が発生（一歩前進）  
+`AccessDeniedException: User: arn:aws:sts::626394096352:assumed-role/MA-higurashit-github-resolver-role-ozdom48y/MA-higurashit-github-resolver is not authorized to perform: codepipeline:StartPipelineExecution on resource: arn:aws:codepipeline:ap-northeast-1:626394096352:MA-higurashit-prd-Frontend-CodePipeline because no identity-based policy allows the codepipeline:StartPipelineExecution action",`
+
+Lambda に パイプラインの実行権限を付与  
+実行ロールである `MA-higurashit-github-resolver-role-ozdom48y` に権限を追加
+![iam-lambda-to-s3_1](./assets/monorepo-vs-multirepo/iam-lambda-to-execute-pipeline.png)
+
+動作確認しパイプラインの実行を確認
+![lambda-access-success](./assets/monorepo-vs-multirepo/codepipeline_2.png)
 
 ---
 
-## GitHub から CodePipeline の起動
+## GitHub から CodePipeline の起動（一気通貫）（2021/12/19）
 
-テストデータを GitHub リポジトリの event 値に置き換える
+GitHub から Webhook を送信
+![lambda-access-success](./assets/monorepo-vs-multirepo/github-webhook-success.png)
 
-実際にファイルを更新する
+パイプラインが正常に動作している
+![lambda-access-success](./assets/monorepo-vs-multirepo/github-webhook-success-2.png)
 
 ## (補足) CodeCommit の場合
 

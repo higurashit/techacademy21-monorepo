@@ -4,6 +4,7 @@ const path = require('path');
 const aws = require('aws-sdk');
 aws.config.region = 'ap-northeast-1';
 const s3 = new aws.S3();
+const codepipeline = new aws.CodePipeline();
 
 // Layer読み込み
 // TODO: node_modules配下に作成するとcommonLayerのみで読み込める
@@ -48,9 +49,16 @@ exports.handler = async (event) => {
   }
 
   // パイプラインの起動
-  needsDeployServices.forEach((service) =>
-    startCodePipeline({ pipelineName: service.CodePipelineName[TargetBranch] })
-  );
+  try {
+    const tasks = needsDeployServices.map((service) =>
+      startCodePipeline({
+        pipelineName: service.CodePipelineName[TargetBranch],
+      })
+    );
+    const ret = await Promise.all(tasks);
+  } catch (e) {
+    throw new Error(e.message);
+  }
 
   // GitHub に起動対象のパイプライン名を返却
   const msg = needsDeployServices
@@ -161,4 +169,9 @@ const needDeploy = (
 };
 
 // Pipelineの起動
-const startCodePipeline = ({ pipelineName }) => {};
+const startCodePipeline = async ({ pipelineName }) => {
+  const params = {
+    name: pipelineName,
+  };
+  await codepipeline.startPipelineExecution(params).promise();
+};
