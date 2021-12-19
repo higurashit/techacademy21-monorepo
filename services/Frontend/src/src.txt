@@ -2,4 +2,3 @@ src
 ccc
 bbb
 ddd
-え
