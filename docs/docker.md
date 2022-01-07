@@ -50,17 +50,22 @@
     WORKDIR /usr/src/app
     ```
   - docker-compose.yml
+
     ```
     version: '3'
     services:
-    app:
-    build:
-    context: .
-    dockerfile: Dockerfile
-    volumes: - ./:/usr/src/app
-    command: sh -c "cd hello-next && npm run dev"
-    ports: - "3000:3000"
+      app:
+        build:
+          context: .
+          dockerfile: Dockerfile
+        volumes:
+          - ./:/usr/src/app
+        command: sh -c "cd hello-next && npm run dev"
+        ports:
+          - "3000:3000"
+
     ```
+
   - `docker-compose run --rm app npm install create-next-app`
 
     - 同様のエラーが発生…
