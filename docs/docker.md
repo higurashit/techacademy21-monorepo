@@ -135,12 +135,12 @@
 
     ```
 
-## DockerHub への登録
+## DockerHub のアカウント作成、ログイン
 
 - DockerHub アカウントの作成
   - 普通に作成
     ![DockerHub Login](./assets/docker/docker-hub.png)
-- DockerHub への Push
+- DockerHub へのログイン（プロンプト）
 
   - `docker login`
 
