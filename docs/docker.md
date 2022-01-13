@@ -441,7 +441,3 @@ c3a0d593ed24: Mounted from library/ruby
 
 DockerHub に登録される
 ![](./assets/docker/docker-first-push-for-docker-hub.png)
-
-## ECS の利用
-
-- Hello ECS の実施
