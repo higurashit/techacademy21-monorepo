@@ -115,11 +115,67 @@ https://qiita.com/MahoTakara/items/03fc0afe29379026c1f3
 ![](./assets/BFF-with-AWS-fargate/make-sample-task_blackbelt_tips_1.png)
 
 ○SLA
-![](./assets/BFF-with-AWS-fargate/make-sample-task_blackbelt_sla_1.png)
+![](./assets/BFF-with-AWS-fargate/make-sample-task_blackbelt-sla_1.png)
 
 ### Public での ECS タスク作成
 
+- タスクを 1 つパブリックサブネットで実行
+- 外部からアクセスする
+
+新しいタスクの実行
+![](./assets/BFF-with-AWS-fargate/make-sample-task_public_1.png)
+
+パブリックサブネットを指定
+![](./assets/BFF-with-AWS-fargate/make-sample-task_public_2.png)
+
+【問題 1】作成できたが「PENDING」からステータスが変わらない…
+![](./assets/BFF-with-AWS-fargate/make-sample-task_public_4.png)
+
+- 【解決】サブネットのルートテーブルに InternetGW が設定されていなかったため
+
+【問題 2】タスクが RUNNNING するようになったが、アクセスできない…
+![](./assets/BFF-with-AWS-fargate/make-sample-task_public_5.png)
+
+- 【解決】以下の stackoverflow を見ると ENI（Elastic Network Interface）にセキュリティグループをアタッチする必要がありそう
+  https://stackoverflow.com/questions/64596558/aws-fargate-container-not-accessible
+  ![](./assets/BFF-with-AWS-fargate/make-sample-task_public_6.png)
+- このタスクでは 8000 番ポートを使用しているので 8000 番のインバウンドを許可する
+  ![](./assets/BFF-with-AWS-fargate/make-sample-task_public_7.png)
+
+- 閲覧できるようになった
+  ![](./assets/BFF-with-AWS-fargate/make-sample-task_public_8.png)
+
 ### Private での ECS タスク作成
+
+- タスクを 1 つプライベートサブネットで実行
+- サービス設定で ALB を置く構成
+  ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_0.png)
+
+新しいタスクの実行で同様にタスクを設定するが、プライベートサブネットにする
+![](./assets/BFF-with-AWS-fargate/make-sample-task_private_1.png)
+PENDING になってしまう
+![](./assets/BFF-with-AWS-fargate/make-sample-task_private_2.png)
+
+- 以下を見ると、NAT ゲートウェイ作成し、サービスでアタッチする必要がありそう
+  https://aws.amazon.com/jp/premiumsupport/knowledge-center/ecs-fargate-tasks-pending-state/
+- NATGW を作成する
+
+  - パブリックサブネットに配置
+  - ElasticIP を設定
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_3.png)
+  - プライベートサブネットのルートテーブルの送信先に NATGW を設定
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_3_1.png)
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_3_2.png)
+
+- サービスの設定
+  - プライベートサブネットに、1 タスク、ロードバランサーなしで設定
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_4.png)
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_5.png)
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_6.png)
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_7.png)
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_8.png)
+- 【問題 3】アクセスできない…
+  - ルートテーブルで許可しているのはプライベート → パブリックのルートなので、LB を置かないと外からは見えない
 
 ### Private での ECS サービス作成
 
