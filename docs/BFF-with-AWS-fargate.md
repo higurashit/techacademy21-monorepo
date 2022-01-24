@@ -175,7 +175,34 @@ PENDING になってしまう
     ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_7.png)
     ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_8.png)
 - 【問題 3】アクセスできない…
-  - ルートテーブルで許可しているのはプライベート → パブリックのルートなので、LB を置かないと外からは見えない
+
+  - 【】ルートテーブルで許可しているのはプライベート → パブリックのルートなので、LB を置かないと外からは見えない
+  - https://aws.amazon.com/jp/premiumsupport/knowledge-center/create-alb-auto-register/
+    - インターネット →ALB(80 番ポート) → ECS のルーティングを設定する
+    -
+  - ALB を指定してロードバランサーを作成
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_1.png)
+  - 以下を設定
+
+        - Scheme：Internal（private サブネットに接続するため）
+        - IP address type：IPv4（なんとなく）
+        - VPC, Subnet：パブリックサブネットを指定
+          - 【問題】2 つサブネットが必要であり、CIDRを大きく切りすぎたため、再作成…
+            - 現行
+              - Public： 0 0000000 /25 .0
+              - Private：1 0000000 /25 .128
+            - 修正後
+              - Public：
+                - 000 00000 /27 .0   ~ 011 00000 /27 .96 の4つ
+              - Private：
+                - 100 00000 /27 .128 ~ 111 00000 /27 .224　の
+
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_2.png) - Security groups：インバウンドの 80 番ポートを開放したセキュリティグループを設定 - Listeners and routing：80 番ポートをリスニング
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_7.png)
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_3.png) - ※target group の作成 - IP アドレス - ポートは 8000 番 - プライベートサブネット上の ECS を指定
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_4.png)
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_5.png)
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_6.png)
 
 ### Private での ECS サービス作成
 
