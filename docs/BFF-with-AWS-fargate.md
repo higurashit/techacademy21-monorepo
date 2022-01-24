@@ -103,9 +103,9 @@ https://dev.classmethod.jp/articles/vpc-subnet-design/
   - 10.2.26.129
   - 10.2.26.130
   - 10.2.26.131
-
-![](./assets/BFF-with-AWS-fargate/make-sample-task_create-subnet_1.png)
-![](./assets/BFF-with-AWS-fargate/make-sample-task_create-subnet_2.png)
+- 実は切り方が不適切（問題 3 へ）
+  ![](./assets/BFF-with-AWS-fargate/make-sample-task_create-subnet_1.png)
+  ![](./assets/BFF-with-AWS-fargate/make-sample-task_create-subnet_2.png)
 
 ○Amazon CloudWatch Container Insights
 ![](./assets/BFF-with-AWS-fargate/make-sample-task_blackbelt-insights_1.png)
@@ -147,7 +147,7 @@ https://qiita.com/MahoTakara/items/03fc0afe29379026c1f3
 
 ### Private での ECS タスク作成
 
-- タスクを 1 つプライベートサブネットで実行
+- タスクを 4 つプライベートサブネットで実行
 - サービス設定で ALB を置く構成
   ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_0.png)
 
@@ -176,35 +176,100 @@ PENDING になってしまう
     ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_8.png)
 - 【問題 3】アクセスできない…
 
-  - 【】ルートテーブルで許可しているのはプライベート → パブリックのルートなので、LB を置かないと外からは見えない
+  - 【解決】ルートテーブルで許可しているのはプライベート → パブリックのルートなので、ALB を置かないと外からは見えない
   - https://aws.amazon.com/jp/premiumsupport/knowledge-center/create-alb-auto-register/
-    - インターネット →ALB(80 番ポート) → ECS のルーティングを設定する
-    -
+    - インターネット →ALB(80 番ポート) → ECS(8000 番ポート) のルーティングを設定する
   - ALB を指定してロードバランサーを作成
     ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_1.png)
-  - 以下を設定
+  - 【問題】2 つサブネットが必要であり、CIDR を大きく切りすぎたため、再作成…
+    - 現行
+      - Public： 0 0000000 /25 .0
+      - Private：1 0000000 /25 .128
+    - 修正後
+      - Public：
+        - 000 00000 /27 .0 ~ 011 00000 /27 .96 の 4 つ
+      - Private：
+        - 100 00000 /27 .128 ~ 111 00000 /27 .224 　の 4 つ
+  - サブネットを削除するため、サブネット内のリソースを削除
+    - ECS サービスの削除
+    - ECS タスクの停止
+    - NAT ゲートウェイの削除
+  - サブネットを削除
+  - サブネットを新規作成
+    - MA-higurashit-public-1：10.2.26.0/27（ap-northeast-1a）
+    - MA-higurashit-private-1：10.2.26.128/27（ap-northeast-1c）
+    - MA-higurashit-private-2：10.2.26.160/27（ap-northeast-1d）
+    - 実は不足している…（問題 5 へ）
+      ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_recreate-subnet.png)
+  - サブネット設定~タスク起動のおさらい
+    - パブリックサブネットにインターネットゲートウェイを作成
+    - NAT ゲートウェイをパブリックサブネットに設定
+    - プライベートサブネット 1, 2 のルートテーブルに NAT ゲートウェイを設定
+    - パブリックサブネットに 1 つタスクを実行し RUNNING&ブラウザ確認
+    - プライベートサブネット 1 にタスクを実行し RUNNNIG
+    - プライベートサブネット 2 にタスクを実行し RUNNNIG
+      ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_recreate-etc-tasks.png)
 
-        - Scheme：Internal（private サブネットに接続するため）
-        - IP address type：IPv4（なんとなく）
-        - VPC, Subnet：パブリックサブネットを指定
-          - 【問題】2 つサブネットが必要であり、CIDRを大きく切りすぎたため、再作成…
-            - 現行
-              - Public： 0 0000000 /25 .0
-              - Private：1 0000000 /25 .128
-            - 修正後
-              - Public：
-                - 000 00000 /27 .0   ~ 011 00000 /27 .96 の4つ
-              - Private：
-                - 100 00000 /27 .128 ~ 111 00000 /27 .224　の
-
-    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_2.png) - Security groups：インバウンドの 80 番ポートを開放したセキュリティグループを設定 - Listeners and routing：80 番ポートをリスニング
-    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_7.png)
-    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_3.png) - ※target group の作成 - IP アドレス - ポートは 8000 番 - プライベートサブネット上の ECS を指定
-    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_4.png)
-    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_5.png)
-    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_6.png)
-
-### Private での ECS サービス作成
+- ALB の設定に戻る
+  - Basic configuration
+    - Scheme：~~Internal（private サブネットに接続するため）~~ 間違い（問題 4 へ）
+    - IP address type：IPv4（なんとなく）
+  - Network mappingInfo
+    - VPC：個人用 VPC
+    - Mappings：~~プライベートサブネット 1, 2 を設定~~ 間違い（問題 5 へ）
+      ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_2.png)
+  - Security groups
+    - インバウンドの 80 番ポートを開放したセキュリティグループを設定（ALB は 80 番のみ受付）
+      ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_8.png)
+      ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_3.png)
+  - Listeners and routing
+    - 80 番ポートをリスニング
+      ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_7.png)
+      - ※target group の作成
+      - IP アドレス - ポートは 8000 番
+      - プライベートサブネット上の ECS を指定
+        - 10.2.26.152
+        - 10.2.26.169
+          ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_4.png)
+          ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_5.png)
+          ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_6.png)
+        - 【問題】エラーが発生。なぜか Zone が ap-northeast-1a になっている（本来は 1c, 1d）
+          ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_9.png)
+        - 【解決】時間をおいてやってみたら、直った。時間…
+          ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_10.png)
+  - Summary
+    - 設定内容を確認
+      ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_alb_11.png)
+- 改めて、サービスの設定を行う
+  - Fargate で 4 タスクを起動
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_again_1.png)
+  - プライベートサブネット 2 つに 4 タスクを起動
+  - セキュリティグループは インバウンドの 8000 番ポートを受け付けるセキュリティグループにする
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_again_2.png)
+  - ALB を作成、80 番ポートを受け取って、HTTP8000 番に流す
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_again_3.png)
+  - 作成完了し、新たに 4 タスクが起動した（手動で作成した private タスクは不要のため削除）
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_again_4.png)
+  - ターゲットグループも同様に手動で作成した private タスクを Deregister する
+    ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_again_5.png)
+- 【問題 4】ヘルスチェックは helthy になっているのに、アクセスできない
+  - 【解決】外部からアクセスする ALB は internet-facing だった
+  - ALB を作り直す…
+    - ECS サービスの削除
+    - ALB の削除（これで新 ALB に以前作成した Target Group が設定できる
+    - ALB の再作成
+      - Scheme を Internet-facing にする
+      - 【問題 5】Internet-facing の ALB はパブリックサブネットを指定しないとだめだという警告が出る
+        - 【解決】[ここ](https://blog.serverworks.co.jp/alb-private-subnet) に書いてあるように、そもそも認識誤り
+        - パブリックサブネットも 2 つ必要、かつ、プライベートサブネットに合わせた AZ に配置する（実際は同 AZ のパブリックサブネット経由でルーティングする）
+          - MA-higurashit-public-2：10.2.26.32/27（ap-northeast-1c）
+          - MA-higurashit-public-3：10.2.26.64/27（ap-northeast-1d）
+            ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_again_6.png)
+      - 再作成完了
+        ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_again_7.png)
+    - ECS サービスの再作成（前回と一緒）
+- ALB の DNS 経由でアクセスしたらコンテナにアクセスができた
+  ![](./assets/BFF-with-AWS-fargate/make-sample-task_private_again_8.png)
 
 ## （余力があれば）Cognito による認証との連携
 
