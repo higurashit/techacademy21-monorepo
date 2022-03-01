@@ -507,7 +507,7 @@ DockerHub に登録される
   - ［CONTAINER］`npm i -g npm@8.5.2`
   - ［CONTAINER］Ctrl + P → Q でデタッチ
   - ［HOST］`d attach nextjs-app`
-  - ［CONAINER］移動後のフォルダで、npm バージョンも 8.5.2 に上がっている
+  - ［CONAINER］移動後のフォルダから始まり、npm バージョンも 8.5.2 に上がっている
   - ［CONTAINER］Ctrl + D でログアウト
   - ［HOST］`d start nextjs-app`
   - ［HOST］`d attach nextjs-app`
@@ -550,7 +550,7 @@ DockerHub に登録される
   - ［CONTAINER］/home/node/app にファイルを作成しようとしたら作成できない（権限なし）
     - app ディレクトリの権限はグループ：69139, ユーザ 66049 で 775
   - ［CONTAINER］/home/node にファイルを作成しようとしたら OK
-    - `--volume=$PWD:/home/node/app` に変更して再実行
+    - `--volume=$PWD:/home/node` に変更して再実行
   - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/home/node --workdir=/home/node --env="PORT=3000" --publish=8080:3000 --user=node node:17.6.0 /bin/bash`
   - ［CONTAINER］/home/node にファイルを作成しようとしたら作成できない（権限なし）
     - node ディレクトリの権限はグループ：69139, ユーザ 66049 で 775 ...
