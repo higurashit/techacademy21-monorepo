@@ -14,4 +14,5 @@
 - [AWS Cloud Development Kit (AWS CDK) について](./aws-cdk.md)
 - [WorkSpaces について](./amazon-workspaces.md)
 - [Docker について](./docker.md)
+- [NextJS について](./nextjs.md)
 - [ノウハウ集](./knowhow.md)
