@@ -441,3 +441,116 @@ c3a0d593ed24: Mounted from library/ruby
 
 DockerHub に登録される
 ![](./assets/docker/docker-first-push-for-docker-hub.png)
+
+## その他の Tips
+
+- alias の設定（コマンドを短くするために）
+  ```
+  vi ~/.bashrc
+  # 以下を追加
+  alias d='docker'
+  alias dc='docker-compose'
+  alias dc_alldelete='docker-compose down --rmi all --volumes --remove-orphans'
+  ```
+- docker グループへの追加（docker コマンドを自分のユーザで実行するために）
+  ```
+  sudo gpasswd -a $USER docker
+  systemctl restart docker
+  ```
+- 起動したコンテナに入るにはいくつかの条件が必要
+  - `docker run -it` でコンテナを作成していること
+  - `docker run -it` コマンド後にエラーが起きないこと
+- 基本的な docker コマンド
+  - docker run
+    - コンテナの作成（一番大事）
+    - -it をつけて入れるようにする、name をつける、dns をつけるなど必要なものは run に集約する
+    - `docker run [OPTIONS] IMAGE [COMMAND] [ARG...]`
+    - `docker run -it --dns=8.8.8.8 --name=mynodejs node:16.14.0-alpine`
+  - docker ps -a
+    - 停止中含めてコンテナを表示
+  - docker rename
+    - 名前を変更できる
+    - `docker rename 旧 新`
+    - `docker rename boring_bouman mynextjs`
+  - docker start
+    - 停止中の docker を起動（docker run 時に -it オプションがついていて、エラーが起きないと起動したままになる）
+  - docker attach
+    - 起動中の docker に入る
+  - （docker に入っている時に）Ctrl + P → Q
+    - 起動中の docker から出る
+  - docker rm
+    - コンテナの削除
+  - docker inspect
+    - コンテナのレイヤ情報を表示
+- docker で try & error する場合
+  - 何度も入力するものは定義してしまう
+  ```
+  # ~/mynodejs.source
+  DEFAULT_OPTIONS="--dns=8.8.8.8"
+  CONTAINER_NAME=mynodejs
+  NODEJS_IMAGE=node:17.6.0-alpine
+  ```
+  - 実行時
+    - `docker run -it $DEFAULT_OPTIONS --name=$CONTAINER_NAME $NODEJS_IMAGE`
+- alpine について
+  - 最小構成の alpine は bash が使えないなど課題がある
+  - [ここ](https://www.creationline.com/lab/29422)に書いてあるとおり、小さくても slim にするべき（制約が出てから考える）
+- docker 上の動作確認 ①
+  - ［HOST］ `d run -it --name=nextjs-app --dns=8.8.8.8 node:17.6.0 /bin/bash`
+    - -it オプションをつけて標準出力を表示＋対話モードに
+    - --name オプションをつけてコンテナ名を指定（ただし、コンテナを消さない限り同じ name では作れない）
+    - --dns オプションをつけて npm が動作しない事象を解消
+    - docker image は node のフルバージョン（alpine, slim は避ける）
+    - /bin/bash で bash から始める
+  - ［CONTAINER］/ から始まる
+  - ［CONTAINER］フォルダ移動
+  - ［CONTAINER］`npm i -g npm@8.5.2`
+  - ［CONTAINER］Ctrl + P → Q でデタッチ
+  - ［HOST］`d attach nextjs-app`
+  - ［CONAINER］移動後のフォルダで、npm バージョンも 8.5.2 に上がっている
+  - ［CONTAINER］Ctrl + D でログアウト
+  - ［HOST］`d start nextjs-app`
+  - ［HOST］`d attach nextjs-app`
+  - ［CONAINER］フォルダは / だが、npm バージョンは 8.5.2 に上がったまま
+- docker 上の動作確認 ②
+  - ［HOST］ `d run -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/usr/local/src/app --workdir=/usr/local/src node:17.6.0 /bin/bash`
+    - --volume(-v)オプション で HOST とファイルを共有
+    - --workdir(-w)オプション で 作業ディレクトリを指定
+  - ［CONTAINER］/usr/local/src から始まる
+  - ［CONTAINER］/usr/local/src/app が作成されていて、Dockerfile 等が入っている
+  - ［CONTAINER］ファイルの作成
+  - ［CONTAINER］Ctrl + P → Q でデタッチ
+  - ［HOST］CONTAINER で作成されたファイルが存在する（root で作成されている）
+  - ［HOST］コンテナを削除
+  - ［HOST］CONTAINER で作成されたファイルは存在したまま
+- docker 上の動作確認 ③
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/usr/local/src/app --workdir=/usr/local/src node:17.6.0 /bin/bash`
+    - --rm オプションをつけてコンテナの終了時にコンテナを削除する
+  - ［CONTAINER］/usr/local/src から始まる
+  - ［CONTAINER］/ にフォルダ移動
+  - ［CONTAINER］Ctrl + P → Q でデタッチ
+  - ［HOST］`d attach nextjs-app`
+  - ［CONTAINER］/ にいる
+  - ［CONTAINER］Ctrl + D でログアウト（コンテナの終了）
+  - ［HOST］`d ps -a` をするとコンテナが削除されている
+  - （補足）Ctrl + P → Q でデタッチした後も、`d stop nextjs-app` をするとコンテナが削除されている
+- docker 上の動作確認 ③
+
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/usr/local/src/app --workdir=/usr/local/src --env="PORT=3000" --publish=8080:3000 --user=node node:17.6.0 /bin/bash`
+    - --env(-e) オプションをつけて環境変数を定義
+    - --publish-all(-p)オプションをつけてホストとコンテナのポートをマッピング
+    - --user(-u)オプションをつけてユーザ名を指定
+  - ［CONTAINER］/usr/local/src から始まる
+  - ［CONTAINER］echo $PORT で 3000 を確認
+  - ［CONTAINER］/usr/local/src/app にファイルを作成しようとしたら作成できない（権限なし）
+    - app ディレクトリの権限はグループ：69139, ユーザ 66049 で 775
+  - ［CONTAINER］/home/node が存在する
+    - `--volume=$PWD:/home/node/app --workdir=/home/node` に変更して再実行
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/home/node/app --workdir=/home/node --env="PORT=3000" --publish=8080:3000 --user=node node:17.6.0 /bin/bash`
+  - ［CONTAINER］/home/node/app にファイルを作成しようとしたら作成できない（権限なし）
+    - app ディレクトリの権限はグループ：69139, ユーザ 66049 で 775
+  - ［CONTAINER］/home/node にファイルを作成しようとしたら OK
+    - `--volume=$PWD:/home/node/app` に変更して再実行
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/home/node --workdir=/home/node --env="PORT=3000" --publish=8080:3000 --user=node node:17.6.0 /bin/bash`
+  - ［CONTAINER］/home/node にファイルを作成しようとしたら作成できない（権限なし）
+    - node ディレクトリの権限はグループ：69139, ユーザ 66049 で 775 ...
