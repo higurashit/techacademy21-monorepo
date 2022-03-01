@@ -84,14 +84,6 @@
 
   - `npm -g config set user root`
   - `docker-compose run --rm nextjs sh -c "npm -g config set user root && npm install create-next-app && npx create-next-app ma-higurashit-nextjs-app --ts"`
+  - [Docker について](./docker.md)の Tips に移動...
 
-- docker-compose で起動したコンテナで実行
-
-  ```
-  dc up
-
-  ```
-
-```
-
-```
+## nextjs アプリの作成

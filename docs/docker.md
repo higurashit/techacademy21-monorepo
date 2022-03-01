@@ -554,3 +554,21 @@ DockerHub に登録される
   - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/home/node --workdir=/home/node --env="PORT=3000" --publish=8080:3000 --user=node node:17.6.0 /bin/bash`
   - ［CONTAINER］/home/node にファイルを作成しようとしたら作成できない（権限なし）
     - node ディレクトリの権限はグループ：69139, ユーザ 66049 で 775 ...
+    - [ここ](https://qiita.com/yohm/items/047b2e68d008ebb0f001)を見てホストのユーザ、PW を共有するように設定
+    - 作業ディレクトリも全部 $PWD 系にしてすっきりさせる
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:$PWD --volume=/etc/group:/etc/group:ro --volume=/etc/passwd:/etc/passwd:ro --workdir=$PWD --env="PORT=3000" --publish=8080:3000 --user=$(id -u $USER):$(id -g $USER) node:17.6.0 /bin/bash`
+    - --volume その 1: ディレクトリ構成を一緒に（ここまでしなくてもよい）
+    - --volume その 2, 3: group と passwd を Read Only で共有
+    - --workdir: 現在のディレクトリ
+    - --user: 現在のユーザ、グループを設定
+  - ［CONTAINER］HOST の現在のディレクトリと同一階層から始まる
+    - TODO: I have no name! を変えたい（Workplaces じゃなければ大丈夫かも）
+    - TODO: プロンプトの表示がフルパスになっているので、変えたい
+      - PS1="${debian_chroot:+($debian_chroot)}\u@\h:\W\$ "
+  - ［CONTAINER］ファイルを作成
+  - ［CONTAINER］ls で確認すると、自分のユーザ、グループになっている
+  - ［CONTAINER］Ctrl + P → Q でデタッチ
+  - ［HOST］rm で削除できる
+  - ［HOST］ファイルを作成
+  - ［HOST］`d attach nextjs-app`
+  - ［CONTAINER］rm で削除できる
