@@ -536,9 +536,7 @@ DockerHub に登録される
   - （補足）Ctrl + P → Q でデタッチした後も、`d stop nextjs-app` をするとコンテナが削除されている
 - docker 上の動作確認 ③
 
-  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/usr/local/src/app --workdir=/usr/local/src --env="PORT=3000" --publish=8080:3000 --user=node node:17.6.0 /bin/bash`
-    - --env(-e) オプションをつけて環境変数を定義
-    - --publish-all(-p)オプションをつけてホストとコンテナのポートをマッピング
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/usr/local/src/app --workdir=/usr/local/src --user=node node:17.6.0 /bin/bash`
     - --user(-u)オプションをつけてユーザ名を指定
   - ［CONTAINER］/usr/local/src から始まる
   - ［CONTAINER］echo $PORT で 3000 を確認
@@ -546,17 +544,17 @@ DockerHub に登録される
     - app ディレクトリの権限はグループ：69139, ユーザ 66049 で 775
   - ［CONTAINER］/home/node が存在する
     - `--volume=$PWD:/home/node/app --workdir=/home/node` に変更して再実行
-  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/home/node/app --workdir=/home/node --env="PORT=3000" --publish=8080:3000 --user=node node:17.6.0 /bin/bash`
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/home/node/app --workdir=/home/node --user=node node:17.6.0 /bin/bash`
   - ［CONTAINER］/home/node/app にファイルを作成しようとしたら作成できない（権限なし）
     - app ディレクトリの権限はグループ：69139, ユーザ 66049 で 775
   - ［CONTAINER］/home/node にファイルを作成しようとしたら OK
     - `--volume=$PWD:/home/node` に変更して再実行
-  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/home/node --workdir=/home/node --env="PORT=3000" --publish=8080:3000 --user=node node:17.6.0 /bin/bash`
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/home/node --workdir=/home/node --user=node node:17.6.0 /bin/bash`
   - ［CONTAINER］/home/node にファイルを作成しようとしたら作成できない（権限なし）
     - node ディレクトリの権限はグループ：69139, ユーザ 66049 で 775 ...
     - [ここ](https://qiita.com/yohm/items/047b2e68d008ebb0f001)を見てホストのユーザ、PW を共有するように設定
     - 作業ディレクトリも全部 $PWD 系にしてすっきりさせる
-  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:$PWD --volume=/etc/group:/etc/group:ro --volume=/etc/passwd:/etc/passwd:ro --workdir=$PWD --env="PORT=3000" --publish=8080:3000 --user=$(id -u $USER):$(id -g $USER) node:17.6.0 /bin/bash`
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:$PWD --volume=/etc/group:/etc/group:ro --volume=/etc/passwd:/etc/passwd:ro --workdir=$PWD --user=$(id -u $USER):$(id -g $USER) node:17.6.0 /bin/bash`
     - --volume その 1: ディレクトリ構成を一緒に（ここまでしなくてもよい）
     - --volume その 2, 3: group と passwd を Read Only で共有
     - --workdir: 現在のディレクトリ
@@ -572,3 +570,13 @@ DockerHub に登録される
   - ［HOST］ファイルを作成
   - ［HOST］`d attach nextjs-app`
   - ［CONTAINER］rm で削除できる
+  - ［CONTAINER］yarn コマンドが実行できない（/.cache/への権限エラー）
+
+- docker 上の動作確認 ④
+  - ［HOST］ `d run --rm -it --name=nextjs-app --dns=8.8.8.8 --volume=$PWD:/root --volume=/etc/group:/etc/group:ro --volume=/etc/passwd:/etc/passwd:ro --workdir=/root --env="PORT=3000" --publish=8080:3000 --user=root:root node:17.6.0 /bin/bash`
+    - root で実行する
+    - --env(-e) オプションをつけて環境変数を定義
+    - --publish-all(-p)オプションをつけてホストとコンテナのポートをマッピング
+  - ［CONTAINER］yarn コマンドが実行できた
+  - ［CONTAINER］nextjs の yarn dev コマンドも正常に実行できた
+  - ［HOST］Firefox で localhost:8080 にアクセスすると、nextjs が表示された
