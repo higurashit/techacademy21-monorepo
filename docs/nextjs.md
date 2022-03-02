@@ -87,3 +87,47 @@
   - [Docker について](./docker.md)の Tips に移動...
 
 ## nextjs アプリの作成
+
+- create-next-app でアプリの雛形を作成
+  - /pages/index.js が http://localhost:3000/ でアクセスした時の実行 javascript
+    各ページの導線を配置する
+    ![](./assets/nextjs/sourcecode_index.png)
+- SSR のページを作成する
+  - /pages/bff/ssr.js（これで http://localhost:3000/bff/ssr でアクセスできる）
+  - SSR には getServerSideProps メソッドを記述する（アクセスの度に実行される）
+    ![](./assets/nextjs/sourcecode_ssr.png)
+- SSG のページを作成する
+  - /pages/bff/ssg.js（これで http://localhost:3000/bff/ssg でアクセスできる）
+  - SSG には getStaticProps メソッドを記述する（npm run build 時のみ実行される）
+    ![](./assets/nextjs/sourcecode_ssg.png)
+- SSG + ISR のページを作成する
+  - /pages/bff/isr.js（これで http://localhost:3000/bff/isr でアクセスできる）
+  - getStaticProps メソッドの返却値に revalidate: 10 を設定する（10 秒おきに再生成）
+    ![](./assets/nextjs/sourcecode_isr.png)
+- `yarn dev` でローカルサーバを起動しても、常にリレンダリングされる
+  - /bff/ssr にアクセス（リンク遷移後にリロード）
+    - API のデータ取得に 408ms, 画面返却に 425ms
+      ![](./assets/nextjs/yarn_dev_ssr.png)
+  - /bff/ssg にアクセス（〃）
+    - API のデータ取得に 380ms, 画面返却に 400ms
+      ![](./assets/nextjs/yarn_dev_ssg.png)
+  - /bff/isr にアクセス（〃）
+    - API のデータ取得に 484ms, 画面返却に 502ms
+      ![](./assets/nextjs/yarn_dev_isr.png)
+- `yarn build` で production 用をビルド
+  - ビルドログで SSR, SSG, SSG + ISR がわかるようになっている（/.next/にビルド資材が格納される）
+    ![](./assets/nextjs/yarn_build.png)
+    - SSG + ISR は revalidate: 10 seconds + ビルド時間 520ms
+    - SSG はビルド時間 675ms
+    - SSR はビルド時間の表示なし
+- `yarn start` で production 用をローカル実行
+  - /bff/ssr にアクセス（リンク遷移後にリロード）
+    - API のデータ取得に 521ms, 画面返却に 537ms
+      ![](./assets/nextjs/yarn_start_ssr.png)
+  - /bff/ssg にアクセス（〃）
+    - API のデータ取得に 627ms, 画面返却に 7ms
+      ![](./assets/nextjs/yarn_start_ssg.png)
+  - /bff/isr にアクセス（〃）
+    - API のデータ取得に 371ms, 画面返却に 5ms
+      ![](./assets/nextjs/yarn_start_isr.png)
+  - ローカルは通信が発生しないため、恐ろしく早い
