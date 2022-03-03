@@ -131,3 +131,26 @@
     - API のデータ取得に 371ms, 画面返却に 5ms
       ![](./assets/nextjs/yarn_start_isr.png)
   - ローカルは通信が発生しないため、恐ろしく早い
+
+## nextjs アプリの DockerImage 作成
+
+- [ここ](https://nextjs.org/docs/deployment#docker-image)を参照する
+
+  - 別のディレクトリに`npx create-next-app --example with-docker nextjs-docker`で example プロジェクトを作成
+  - nextjs 部分はデフォルトのままのため、Docker 系のファイルの移動で良さそう
+  - 必要なファイルを移動
+    - Dockerfile
+    - next.config.js の一部設定
+    - .dockerignore
+  - app.json は GCP 用のようなので放置
+  - `docker build -t nextjs-docker .`
+
+    - error checking context: 'no permission to read from '/home/higurashit/MyProject/techacademy21-monorepo/services/backend-for-frontend_container/.bash_history''. が発生
+      - /root/ で実行していた時の bash_history が残っていたよう
+      - .dockerignore に追加して再実行（削除でも良かったか）
+    - unable to select packages: libc6-compat (no such package):
+      - alpine 用の apk add コマンドが落ちている
+      - slim を使うよう Dockerfile を修正
+        ![](./assets/nextjs/docker_Dockerfile_diff.png)
+
+  - `docker run -p 3000:3000 nextjs-docker`
