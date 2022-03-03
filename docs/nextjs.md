@@ -135,7 +135,6 @@
 ## nextjs アプリの DockerImage 作成
 
 - [ここ](https://nextjs.org/docs/deployment#docker-image)を参照する
-
   - 別のディレクトリに`npx create-next-app --example with-docker nextjs-docker`で example プロジェクトを作成
   - nextjs 部分はデフォルトのままのため、Docker 系のファイルの移動で良さそう
   - 必要なファイルを移動
@@ -143,14 +142,60 @@
     - next.config.js の一部設定
     - .dockerignore
   - app.json は GCP 用のようなので放置
-  - `docker build -t nextjs-docker .`
-
-    - error checking context: 'no permission to read from '/home/higurashit/MyProject/techacademy21-monorepo/services/backend-for-frontend_container/.bash_history''. が発生
+  - `d build -t nextjs-docker .`
+    - 【問題】error checking context: 'no permission to read from '/home/higurashit/MyProject/techacademy21-monorepo/services/backend-for-frontend_container/.bash_history''. が発生
       - /root/ で実行していた時の bash_history が残っていたよう
       - .dockerignore に追加して再実行（削除でも良かったか）
-    - unable to select packages: libc6-compat (no such package):
+    - 【問題】unable to select packages: libc6-compat (no such package):
       - alpine 用の apk add コマンドが落ちている
       - slim を使うよう Dockerfile を修正
         ![](./assets/nextjs/docker_Dockerfile_diff.png)
-
-  - `docker run -p 3000:3000 nextjs-docker`
+    - 【問題】info There appears to be trouble with your network connection. Retrying...
+      - yarn install がうまくいってない。Dockerfile に dns 設定を追加
+        - 修正前）RUN yarn install --frozen-lockfile
+        - 修正後）RUN echo 'nameserver 8.8.8.8' >> /etc/resolv.conf && yarn install --frozen-lockfile
+      - 直らない。Timeout かもしれないので設定する（タイムアウト 1 分）
+        - 修正前）RUN echo 'nameserver 8.8.8.8' >> /etc/resolv.conf && yarn install --frozen-lockfile
+        - 修正後）RUN echo 'nameserver 8.8.8.8' >> /etc/resolv.conf && yarn install --frozen-lockfile --network-timeout 60000
+      - 直らない。サーバに入ってトラブルシュート。Dockerfile をトレースして run する
+        - Dockerfile は以下の通り
+          ```
+          # Install dependencies only when needed
+          FROM node:17.6.0 AS deps
+          # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+          WORKDIR /app
+          COPY package.json yarn.lock ./
+          RUN echo 'nameserver 8.8.8.8' >> /etc/resolv.conf && yarn install --frozen-lockfile
+          ```
+        - ［H］`d run --rm -it --name=test --workdir=/app node:17.6.0 /bin/bash`
+        - ［C］Ctrl + P → Q でデタッチ
+        - ［H］`d cp package.json test:/app`
+        - ［H］`d cp yaran.lock test:/app`
+        - ［H］`d attach test`
+        - ［C］`ls -l`
+          - ファイルが存在する
+        - ［C］`cat /etc/resolve.conf`
+        - ［C］`echo 'nameserver 8.8.8.8' >> /etc/resolv.conf` ※RUN の 1 つ目
+        - ［C］`cat /etc/resolve.conf`
+          - nameserver が追加されたことを確認
+        - ［C］`yarn install --frozen-lockfile` ※RUN の 2 つ目、タイムアウト指定なし
+          - やはり通信できていない。
+        - ［C］`ping https://registry.yarnpkg.com/babel-eslint`
+          - ping コマンドが無い
+          - `apt-get update`
+            - 通信エラーっぽい...
+            - docker run に --dns オプションをつけるとどうか
+        - ［C］Ctrl + D でコンテナを抜ける（削除される）
+        - ［H］`d run --rm -it --dns=8.8.8.8 --name=test --workdir=/app node:17.6.0 /bin/bash`
+        - ［C］Ctrl + P → Q でデタッチ
+        - ［H］`d cp package.json test:/app`
+        - ［H］`d cp yaran.lock test:/app`
+        - ［H］`d attach test`
+        - ［C］`yarn install --frozen-lockfile` ※RUN の 2 つ目、タイムアウト指定なし
+          - 通信できてる...
+          - Your lockfile needs to be updated, but yarn was run with `--frozen-lockfile`. エラー
+          - `yarn install` で正常に動作することを確認
+          - https://kazuhira-r.hatenablog.com/entry/2020/04/12/194225 によると、docker build 時に host のネットワークが使えるとのこと
+  - `d build --network host -t nextjs-docker .`
+    - 【問題】Your lockfile needs to be updated, but yarn was run with `--frozen-lockfile`. エラー
+      - yarn.log を改めて作り直す
