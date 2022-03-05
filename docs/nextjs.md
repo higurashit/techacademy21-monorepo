@@ -135,6 +135,7 @@
 ## nextjs アプリの DockerImage 作成
 
 - [ここ](https://nextjs.org/docs/deployment#docker-image)を参照する
+
   - 別のディレクトリに`npx create-next-app --example with-docker nextjs-docker`で example プロジェクトを作成
   - nextjs 部分はデフォルトのままのため、Docker 系のファイルの移動で良さそう
   - 必要なファイルを移動
@@ -182,7 +183,7 @@
           - やはり通信できていない。
         - ［C］`ping https://registry.yarnpkg.com/babel-eslint`
           - ping コマンドが無い
-          - `apt-get update`
+          - `apt-get update && apt-get install iputils-ping`
             - 通信エラーっぽい...
             - docker run に --dns オプションをつけるとどうか
         - ［C］Ctrl + D でコンテナを抜ける（削除される）
@@ -198,4 +199,49 @@
           - https://kazuhira-r.hatenablog.com/entry/2020/04/12/194225 によると、docker build 時に host のネットワークが使えるとのこと
   - `d build --network host -t nextjs-docker .`
     - 【問題】Your lockfile needs to be updated, but yarn was run with `--frozen-lockfile`. エラー
-      - yarn.log を改めて作り直す
+      - yarn.log を改めて作り直したら通った
+    - いくつか WARNING が出ているが正常終了（SSG のビルドもされているっぽい）
+  - `d run -p 3000:3000 nextjs-docker`
+    - https://localhost:3000 でつながることを確認
+    - 【問題】SSR の画面でコンソールエラー
+      - 結局、コンテナから外の API を叩かないといけない
+      - docker-compose は dns 周りをやってくれるとの情報あり
+      - docker-compose.yaml を作成する
+        ```
+        version: '3.9' # optional since v1.27.0
+        services:
+          nextjs:
+            build:
+              context: .
+              dockerfile: Dockerfile
+            container_name: nextjs-app
+            dns: 8.8.8.8
+        ```
+  - `dc up`
+    - 【問題】SSG 作成で通信エラー
+      - d run で --dns をつけているとうまくいくところに立ち返る
+      - どうにも良い情報がない
+
+- そもそも問題が起きているのか？
+  - `d images`
+    - nextjs-docker:latest が存在する
+  - `d run --rm -p 3000:3000 --dns=8.8.8.8 nextjs-docker:latest`
+    - 動作する
+    - パラメータは ECS で設定すればよいのでは？（ローカル開発も ECS 上の動作もできるなら OK）
+- まとめ
+  - ローカルでの実行時：`npm dev`
+  - リリース前のビルド時：`d build --network host -t nextjs-docker .`
+  - ビルドイメージからの実行時：`d run --rm -p 3000:3000 --dns=8.8.8.8 nextjs-docker:latest`
+- リリース準備
+  - `d login`
+  - `d tag nextjs-docker higurashit/nextjs-docker` # build 時のタグでユーザ名をつけておいていいかも
+  - `d push higurashit/nextjs-docker`
+  - https://hub.docker.com/repository/docker/higurashit/nextjs-docker
+- ECS の設定
+  ![](./assets/nextjs/ecs_create_task_def.png)
+  ![](./assets/nextjs/ecs_create_service_1.png)
+  - 【問題】全部 Pending に
+    - タスク定義ーコンテナの定義で DNS サーバを設定していない
+    - DNS サーバはネットワークモードが awsvpc だと設定できない。Fargate は awsvpc 縛りなので詰み？
+    - d run でコンテナを作成して commit する方法はどうか？
+  - 【解決】resolve.conf じゃなくて resolv.conf だった...
