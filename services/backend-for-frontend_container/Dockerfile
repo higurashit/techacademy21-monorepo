@@ -61,5 +61,5 @@ EXPOSE 3000
 ENV PORT 3000
 
 # NextJS実行
-RUN chmod 744 builder.sh
+RUN chmod 744 runner.sh
 CMD ["sh", "runner.sh"]

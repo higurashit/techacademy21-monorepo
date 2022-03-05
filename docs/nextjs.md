@@ -228,15 +228,6 @@
   - `d run --rm -p 3000:3000 --dns=8.8.8.8 nextjs-docker:latest`
     - 動作する
     - パラメータは ECS で設定すればよいのでは？（ローカル開発も ECS 上の動作もできるなら OK）
-- まとめ
-  - ローカルでの実行時：`npm dev`
-  - リリース前のビルド時：`d build --network host -t nextjs-docker .`
-  - ビルドイメージからの実行時：`d run --rm -p 3000:3000 --dns=8.8.8.8 nextjs-docker:latest`
-- リリース準備
-  - `d login`
-  - `d tag nextjs-docker higurashit/nextjs-docker` # build 時のタグでユーザ名をつけておいていいかも
-  - `d push higurashit/nextjs-docker`
-  - https://hub.docker.com/repository/docker/higurashit/nextjs-docker
 - ECS の設定
   ![](./assets/nextjs/ecs_create_task_def.png)
   ![](./assets/nextjs/ecs_create_service_1.png)
@@ -245,3 +236,26 @@
     - DNS サーバはネットワークモードが awsvpc だと設定できない。Fargate は awsvpc 縛りなので詰み？
     - d run でコンテナを作成して commit する方法はどうか？
   - 【解決】resolve.conf じゃなくて resolv.conf だった...
+    - 加えて、WorkSpaces の/etc/resolv.conf に載っている nameserver の記載があると通信できない
+    - Git リポジトリ上に /etc/resolv.conf を用意して、Dockerfile の COPY でコピーする
+      - ダメ。RUN 時には元に戻っている
+    - COPY コマンドでコンテナ上にファイルをコピーした上で、RUN コマンドで `cat resolv.conf > /etc/resolv.conf` とする
+      - ダメ。runner の CMD 実行時にできない
+    - Dockerfile で CMD 実行時に配列形式ではなくベタ書きにすればよいのでは？
+      - ダメ。/etc/resolv.conf の上書きは root で実行、node の実行は nodejs ユーザにしたい
+    - deps, builder, runner それぞれ、シェルスクリプトを実行すればどうか
+      - 採用、今後も増えるかもしれないし。
+- まとめ
+  - ローカルでの実行：`npm dev`
+  - リリース前のビルド：
+    - Dockerfile はマルチステージとし、dns 設定を変更するため shell 実行にする
+    - `REPO=higurashit`
+    - `IMAGE=nextjs-docker`
+    - `TAG=1.1`
+    - `d build --no-cache -t $REPO/$IMAGE:$TAG .`
+  - ビルドイメージからの実行：`d run --rm -p 3000:3000 $REPO/$IMAGE:$TAG`
+  - リリース準備:
+    - `d login`
+    - `d push $REPO/$IMAGE:$TAG`
+  - https://hub.docker.com/repository/docker/higurashit/nextjs-docker
+  - ECS のタスク定義で上記リポジトリ、タグを設定

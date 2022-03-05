@@ -4,5 +4,5 @@
 cat resolv.conf > /etc/resolv.conf
 
 # NextJSの実行
-su nextjs
+su nextjs --shell=/bin/bash
 node server.js
