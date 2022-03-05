@@ -1,57 +1,63 @@
-# Install dependencies only when needed
-FROM node:17.6.0 AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+# BASE: https://github.com/vercel/next.js/blob/946f465a6e4aba2a2aeee8dd33666e64e9075449/examples/with-docker/Dockerfile
+# 変更点
+#   1. nodeのバージョンを17.6.0に（2022/3/5時点の最新）
+#   2. dns設定の追加（WorkSpacesの/etc/resolv.confのままだと通信ができないため）
+#   3. コメントの削除（見たい場合は上記のURLへ）
+
+##############################################################
+# yarn install 用 のコンテナ
+#    実行コンテナを最小サイズにするために複数コンテナでbuildをしている
+##############################################################
+FROM node:17.6.0-slim AS deps
 WORKDIR /app
+
 COPY package.json yarn.lock ./
 
 # dns設定（yarn install で外部アクセスが必要）
-COPY ./etc/resolv.conf /etc/resolv.conf
+COPY ./build-scripts/deps.sh ./
+RUN chmod 744 deps.sh
+RUN sh ./deps.sh
 
-RUN yarn install --frozen-lockfile
+RUN cat resolv.conf > /etc/resolv.conf && yarn install --frozen-lockfile
 
-# If using npm with a `package-lock.json` comment out above and use below instead
-# COPY package.json package-lock.json ./ 
-# RUN npm ci
 
-# Rebuild the source code only when needed
-FROM node:17.6.0 AS builder
+##############################################################
+# yarn build 用 のコンテナ
+##############################################################
+FROM node:17.6.0-slim AS builder
 WORKDIR /app
+
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # dns設定（yarn build でSSG用に外部アクセスが必要）
-COPY ./etc/resolv.conf /etc/resolv.conf
+COPY ./etc/resolv.conf ./
+RUN cat resolv.conf > /etc/resolv.conf && yarn build
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN yarn build
-
-# Production image, copy all the files and run next
-FROM node:17.6.0 AS runner
+##############################################################
+# NextJS 実行用のコンテナ
+##############################################################
+FROM node:17.6.0-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
-# Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# You only need to copy next.config.js if you are NOT using the default configuration
+# build用のコンテナから必要なファイルをコピー
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 
-# Automatically leverage output traces to reduce image size 
-# https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # dns設定（node でSSR用に外部アクセスが必要）
-COPY ./etc/resolv.conf /etc/resolv.conf
+COPY ./etc/resolv.conf ./
+ENTRYPOINT ["cat","resolv.conf",">","/etc/resolv.conf"]
 
 USER nextjs
 
