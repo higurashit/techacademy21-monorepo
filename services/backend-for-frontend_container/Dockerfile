@@ -12,13 +12,11 @@ FROM node:17.6.0-slim AS deps
 WORKDIR /app
 
 COPY package.json yarn.lock ./
+COPY build-scripts/resolv.conf build-scripts/deps.sh ./
 
-# dns設定（yarn install で外部アクセスが必要）
-COPY ./build-scripts/deps.sh ./
+# install実行
 RUN chmod 744 deps.sh
 RUN sh ./deps.sh
-
-RUN cat resolv.conf > /etc/resolv.conf && yarn install --frozen-lockfile
 
 
 ##############################################################
@@ -29,11 +27,12 @@ WORKDIR /app
 
 
 COPY --from=deps /app/node_modules ./node_modules
+COPY build-scripts/resolv.conf build-scripts/builder.sh ./
 COPY . .
 
-# dns設定（yarn build でSSG用に外部アクセスが必要）
-COPY ./etc/resolv.conf ./
-RUN cat resolv.conf > /etc/resolv.conf && yarn build
+# build実行
+RUN chmod 744 builder.sh
+RUN sh ./builder.sh
 
 
 ##############################################################
@@ -47,6 +46,8 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+COPY build-scripts/resolv.conf build-scripts/runner.sh ./
+
 # build用のコンテナから必要なファイルをコピー
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
@@ -55,14 +56,10 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# dns設定（node でSSR用に外部アクセスが必要）
-COPY ./etc/resolv.conf ./
-ENTRYPOINT ["cat","resolv.conf",">","/etc/resolv.conf"]
-
-USER nextjs
-
 EXPOSE 3000
 
 ENV PORT 3000
 
-CMD ["node", "server.js"]
+# NextJS実行
+RUN chmod 744 builder.sh
+CMD ["sh", "runner.sh"]
