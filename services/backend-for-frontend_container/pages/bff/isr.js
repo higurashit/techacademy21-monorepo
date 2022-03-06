@@ -5,10 +5,10 @@ function Isr({ data, diff_ms }) {
   return (
     <>
       <Head>
-        <title>Static Site Generator Page.</title>
+        <title>Incremental Static Regeneration Page.</title>
       </Head>
 
-      <h1>Static Site Generator Page.</h1>
+      <h1>Incremental Static Regeneration Page.</h1>
       <h2>
         Random Photo is ... id:{data.id}（{diff_ms}ms）
       </h2>

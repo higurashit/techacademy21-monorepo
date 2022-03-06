@@ -1,8 +1,10 @@
 # Nextjs について
 
-## Docker, Docker Compose のインストールまで
+## 前提：Docker のインストール、Fargate が利用できること
 
-[WorkSpaces について](./amazon-workspaces.md) を参照
+- [WorkSpaces について](./amazon-workspaces.md) を参照
+- [Docker について](./docker.md) を参照
+- [Serverless Container（AWS Fargate）による BFF](./BFF-with-AWS-fargate.md) を参照
 
 ## まとめ
 
@@ -10,8 +12,8 @@
   - Node が使える環境で実施
   - `create-next-app` コマンドで作成
 - ローカルでの実行：
-  - `yarn dev`：サイトの動作確認
-  - `yarn build && yarn start`：SSG, ISR の動作確認（SSG が build される）
+  - `yarn dev`：サイトの動作確認（localhost:3000）
+  - `yarn build && yarn start`：SSG, ISR の動作確認（SSG が build される。localhost:3000）
 - Docker イメージの作成：
   - Docker CLI が使える環境で実施
   - Dockerfile はマルチステージとし、dns 設定を変更するため shell 実行にする
@@ -20,14 +22,22 @@
   - `TAG=1.1`
   - `d build --no-cache -t $REPO/$IMAGE:$TAG .`
 - ビルドした Docker イメージの動作確認：
-  - `d run --rm -p 3000:3000 $REPO/$IMAGE:$TAG`
+  - `d run --rm -p 3000:3000 $REPO/$IMAGE:$TAG`: localhost:3000
 - Docker イメージの Docker Hub への Push:
   - `d login`
   - `d push $REPO/$IMAGE:$TAG`
   - https://hub.docker.com/repository/docker/higurashit/nextjs-docker
 - ECS へのリリース:
-  - ECS のタスク定義で上記リポジトリ、タグを設定する
-  - ECS のサービスで作成したタスクを利用する
+  - ECS のタスク定義で上記リポジトリ、タグを指定して新規リビジョンを作成する（初回はタスクそのものの作成）
+  - 動作確認する
+    - Public サブネットでタスクを実行する場合
+      - ECS のタスク実行
+      - ECS タスクの PublicIP アドレスでアクセス
+    - Private サブネットでタスクを実行する場合
+      - ECS のサービスを作成する（ALB に接続する）
+      - ALB のドメイン でアクセス
+
+# 以下、作業履歴
 
 ## Nextjs アプリの作成
 
