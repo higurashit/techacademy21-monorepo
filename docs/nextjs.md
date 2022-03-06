@@ -4,6 +4,31 @@
 
 [WorkSpaces について](./amazon-workspaces.md) を参照
 
+## まとめ
+
+- ローカルでの開発：
+  - Node が使える環境で実施
+  - `create-next-app` コマンドで作成
+- ローカルでの実行：
+  - `yarn dev`：サイトの動作確認
+  - `yarn build && yarn start`：SSG, ISR の動作確認（SSG が build される）
+- Docker イメージの作成：
+  - Docker CLI が使える環境で実施
+  - Dockerfile はマルチステージとし、dns 設定を変更するため shell 実行にする
+  - `REPO=higurashit`
+  - `IMAGE=nextjs-docker`
+  - `TAG=1.1`
+  - `d build --no-cache -t $REPO/$IMAGE:$TAG .`
+- ビルドした Docker イメージの動作確認：
+  - `d run --rm -p 3000:3000 $REPO/$IMAGE:$TAG`
+- Docker イメージの Docker Hub への Push:
+  - `d login`
+  - `d push $REPO/$IMAGE:$TAG`
+  - https://hub.docker.com/repository/docker/higurashit/nextjs-docker
+- ECS へのリリース:
+  - ECS のタスク定義で上記リポジトリ、タグを設定する
+  - ECS のサービスで作成したタスクを利用する
+
 ## Nextjs アプリの作成
 
 - Dockerfile の作成（2022/2/28 時点の最新 node）
@@ -294,17 +319,3 @@
             AZはap-northeast-1d
             ☆ここにタスクを直接配置するとOK: IGWは効いている、セキュリティGも既存でOK、NW-ACLもOK
       ```
-- まとめ
-  - ローカルでの実行：`npm dev`
-  - リリース前のビルド：
-    - Dockerfile はマルチステージとし、dns 設定を変更するため shell 実行にする
-    - `REPO=higurashit`
-    - `IMAGE=nextjs-docker`
-    - `TAG=1.1`
-    - `d build --no-cache -t $REPO/$IMAGE:$TAG .`
-  - ビルドイメージからの実行：`d run --rm -p 3000:3000 $REPO/$IMAGE:$TAG`
-  - リリース準備:
-    - `d login`
-    - `d push $REPO/$IMAGE:$TAG`
-  - https://hub.docker.com/repository/docker/higurashit/nextjs-docker
-  - ECS のタスク定義で上記リポジトリ、タグを設定
