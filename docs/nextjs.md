@@ -22,6 +22,7 @@
   - `TAG=1.1`
   - `d build --no-cache -t $REPO/$IMAGE:$TAG .`
 - ビルドした Docker イメージの動作確認：
+  - `d images`
   - `d run --rm -p 3000:3000 $REPO/$IMAGE:$TAG`: localhost:3000
 - Docker イメージの Docker Hub への Push:
   - `d login`

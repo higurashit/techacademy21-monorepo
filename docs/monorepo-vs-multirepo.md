@@ -2,6 +2,49 @@
 
 [Back to Top](./index.md)
 
+## まとめ
+
+- S3, API GW, Lambda, CodePipeline, GitHub Webhook の組み合わせで Monorepo の CI/CD を実現する
+- Lambda:
+  - handler: [/handlers/monorepo-webhook-receiver/index.js](./devtools/API/src/lambda/handlers/monorepo-webhook-receiver/index.js)
+    - マネジメントコンソールから手動で関数を作成する
+  - layers: [/layers/commonLayer/index.js](./devtools/API/src/lambda/layers/commonLayer/index.js)
+    - nodejs フォルダに package.json 含めて格納して zip 化
+    - マネジメントコンソールから layer にアップロードする
+  - ローカルでのテスト
+    - [ReadMe](./devtools/API/README.md)を参照
+    - テストコード: [/tests/monorepo-webhook-receiver.test.js](./devtools/API/src/lambda/tests/monorepo-webhook-receiver.test.js)
+- API GW
+  - 東京リージョン
+  - HTTP API を作成
+  - 作成した Lambda を統合し、POST メソッドのみ作成
+  - $default ステージのエンドポイントが払い出されるのでコピー
+  - Postman で POST リクエストを送り、正常に動作することを確認。（API Gateway → Lambda）
+- S3
+  - すべてデフォルト設定で作成する
+  - [設定用 json](./devtools/API/S3/ma-higurashit-github-resolver-settings/settings.json)を格納する
+  - Lambda に付与しているロールを変更し、Lambda -> S3 のアクセス権限を付与
+    - S3 の読み込み権限
+    - バケット、ファイルも指定し最小限にする
+- CodePipeline
+  - デプロイ用の S3 を作成する
+  - マネジメントコンソールからパイプラインを作成する
+  - ソースアクションでは AWS と GitHub の接続を行う
+  - 「ソースコードの変更時にパイプラインを開始する」はオフにする（Lambda による実行のため）
+  - Lambda に付与しているロールを変更し、Lambda -> CodePipeline のアクセス権限を付与
+    - CodePipeline の実行権限
+    - 起動するパイプラインを指定
+- GitHub Webhook
+  - [ここ](https://docs.github.com/ja/developers/webhooks-and-events/webhooks/creating-webhooks)を参考に Webhook を追加
+  - Payload URL に API Gateway のエンドポイントを指定
+  - Content type は`application/json`を選択
+  - SSL verification は`Enable SSL verification`を選択（デフォルト）
+  - 「Which events would you like to trigger this webhook?」は`Just the push event`を選択（デフォルト）
+  - `Active`にチェックを入れて`Add Webhook`ボタンを押す
+  - （セキュリティ対応）Secret を設定することで認証が可能
+
+# 以下、検証内容
+
 ## Multirepo とは<sup>[1]</sup>
 
 - サービスやライブラリを複数のリポジトリで管理する方法
