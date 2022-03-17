@@ -21,14 +21,14 @@
   - $default ステージのエンドポイントが払い出されるのでコピー
   - Postman で POST リクエストを送り、正常に動作することを確認。（API Gateway → Lambda）
 - S3
-  - すべてデフォルト設定で作成する
+  - S3 バケットをすべてデフォルト設定で作成する
   - [設定用 json](./devtools/API/S3/ma-higurashit-github-resolver-settings/settings.json)を格納する
   - Lambda に付与しているロールを変更し、Lambda -> S3 のアクセス権限を付与
     - S3 の読み込み権限
     - バケット、ファイルも指定し最小限にする
 - CodePipeline
   - デプロイ用の S3 を作成する
-  - マネジメントコンソールからパイプラインを作成する
+  - マネジメントコンソールから CodePipeline を作成する
   - ソースアクションでは AWS と GitHub の接続を行う
   - 「ソースコードの変更時にパイプラインを開始する」はオフにする（Lambda による実行のため）
   - Lambda に付与しているロールを変更し、Lambda -> CodePipeline のアクセス権限を付与
