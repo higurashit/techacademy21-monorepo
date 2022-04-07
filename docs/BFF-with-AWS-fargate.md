@@ -4,11 +4,13 @@
 
 ## 前提
 
-- BFF（NextJS など）がコンテナ化され、DockerHub など Pull できる箇所に配置されていること
+- BFF（NextJS など）がコンテナ化され、DockerHub など Pull できる箇所に配置されていること（下記参照）
+  - [Docker について](./docker.md)
+  - [Nextjs について](./nextjs.md)
 
 ## まとめ
 
-- サブネットの作成
+- ALB, ECS 用のサブネット作成
   - VPC を作成
   - サブネットを 2 つの AZ で 4 つ作成
     - ALB 用: パブリックサブネットが 2 つ必要（AZ を分ける）
@@ -18,7 +20,7 @@
       - インターネットゲートウェイ を VPC 上に作成
       - サブネットを ap-northeast-1a, ap-northeast-1c に作成
       - ルートテーブルの 0.0.0.0/0 に インターネットゲートウェイ を設定
-    - パブリックサブネット
+    - プライベートサブネット
       - Elastic IP を作成
       - NAT ゲートウェイ をパブリックサブネット上に作成し Elastic IP を紐付け
       - サブネットを ap-northeast-1a, ap-northeast-1c に作成

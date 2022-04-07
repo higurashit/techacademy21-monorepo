@@ -17,5 +17,4 @@
 ## 未実施
 
 - [CQRS（非同期）](./asynchronous-CQRS.md)
-- [ノウハウ集](./knowhow.md)
 - [AWS Cloud Development Kit (AWS CDK) について](./aws-cdk.md)

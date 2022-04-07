@@ -1,8 +1,16 @@
 # Docker について
 
-## Docker, Docker Compose のインストールまで
+## 前提：Docker, Docker Compose がインストールされていること
 
 [WorkSpaces について](./amazon-workspaces.md) を参照
+
+## まとめ
+
+- 注意事項（ハマりポイント）
+  - イメージ: alpine は遊ぶには良いが実際のアプリには使いづらい（slim を利用）
+  - DNS: Docker の DNS 設定はホスト側がコピーされる
+    - WorkSpaces の/etc/resolv.conf に載っている nameserver の記載があると通信できない...（めちゃくちゃハマった）
+    - COPY で上書きはできないので、シェルスクリプトで上書きをした
 
 ## チュートリアルの実施
 
